@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "소곤.zip",
+    "slug": "sogonzip",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "sogonzip",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

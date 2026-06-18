@@ -1,0 +1,182 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { ChevronLeft } from 'lucide-react';
+import { createSogonFile, saveSogonFile } from '../lib/sogonStore';
+
+export function CreateSogonFile() {
+  const navigate = useNavigate();
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [content, setContent] = useState('');
+  const [sensitivity, setSensitivity] = useState(2);
+  const [openingTime, setOpeningTime] = useState('내가 직접 열게요');
+  const [recommendationOn, setRecommendationOn] = useState(true);
+
+  const tags = ['음식', '알레르기', '카페', '데이트 취향', '취미', '선물', '비밀', '직접 추가'];
+  const sensitivities = ['😄', '😀', '🙂', '🙁', '😣'];
+  const openingOptions = [
+    '지금 알려도 좋아요',
+    '100일 후',
+    '200일 후',
+    '1년 후',
+    '직접 날짜 선택',
+    '내가 직접 열게요',
+    '열고 싶지 않아요'
+  ];
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSave = () => {
+    if (!content.trim()) {
+      return;
+    }
+
+    const file = createSogonFile({
+      tags: selectedTags.length > 0 ? selectedTags : ['기타'],
+      content: content.trim(),
+      sensitivity: sensitivities[sensitivity],
+      openingTime,
+      recommendationOn
+    });
+
+    saveSogonFile(file);
+    navigate('/my-folder');
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[color:var(--cream)]">
+      {/* Header */}
+      <div className="grid grid-cols-[44px_1fr_44px] items-center px-6 py-6 border-b border-[color:var(--border)] bg-white">
+        <button
+          type="button"
+          aria-label="홈으로 돌아가기"
+          onClick={() => navigate('/home')}
+          className="z-10 flex h-11 w-11 items-center justify-center rounded-full hover:bg-[color:var(--gray-light)] transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
+        </button>
+        <h1 className="text-center text-xl font-bold text-[color:var(--navy)]">
+          새 소곤.zip 압축하기
+        </h1>
+        <div />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-28">
+        <p className="text-sm text-[color:var(--gray)] text-center leading-relaxed">
+          언젠가 알려주고 싶은 취향이나 마음을<br />
+          조용히 저장해보세요.
+        </p>
+
+        {/* File tag */}
+        <div>
+          <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
+            소곤.zip 태그
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {tags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`px-4 py-2 rounded-full text-sm transition-all ${
+                  selectedTags.includes(tag)
+                    ? 'bg-[color:var(--lavender)] text-white'
+                    : 'bg-white text-[color:var(--navy)] border border-[color:var(--border)]'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* File content */}
+        <div>
+          <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
+            압축할 내용
+          </label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="예: 사실 나는 매운 음식을 잘 못 먹어."
+            className="w-full h-32 px-4 py-3 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] resize-none text-[color:var(--navy)]"
+          />
+        </div>
+
+        {/* Sensitivity */}
+        <div>
+          <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
+            민감도
+          </label>
+          <div className="flex gap-3 justify-center">
+            {sensitivities.map((emoji, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSensitivity(idx)}
+                className={`text-3xl transition-all ${
+                  sensitivity === idx ? 'scale-125' : 'opacity-40 hover:opacity-70'
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Opening timing */}
+        <div>
+          <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
+            열리는 시점
+          </label>
+          <select
+            value={openingTime}
+            onChange={(e) => setOpeningTime(e.target.value)}
+            className="w-full px-4 py-3 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
+          >
+            {openingOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Recommendation reflection */}
+        <div className="bg-white rounded-xl p-4 border border-[color:var(--border)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-[color:var(--navy)] mb-1">추천에 반영하기</p>
+              <p className="text-xs text-[color:var(--gray)]">
+                상대에게 열리기 전에도, 추천에는 조심스럽게 반영돼요.
+              </p>
+            </div>
+            <button
+              onClick={() => setRecommendationOn(!recommendationOn)}
+              className={`w-12 h-6 rounded-full transition-colors relative ${
+                recommendationOn ? 'bg-[color:var(--lavender)]' : 'bg-[color:var(--gray-light)]'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                  recommendationOn ? 'translate-x-6' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Save button */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)]">
+        <button
+          onClick={handleSave}
+          disabled={!content.trim()}
+          className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          소곤.zip으로 압축하기
+        </button>
+      </div>
+    </div>
+  );
+}

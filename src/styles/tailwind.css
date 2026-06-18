@@ -1,0 +1,29 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{js,ts,jsx,tsx}';
+
+@import 'tw-animate-css';
+
+.sogon-primary-button {
+  background: var(--coral);
+  color: #ffffff;
+  border-radius: 1.35rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 14px 30px rgba(245, 138, 163, 0.38);
+}
+
+.sogon-primary-button:hover {
+  background: var(--coral-deep);
+}
+
+.sogon-soft-button {
+  background: var(--gray-light);
+  color: var(--navy);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.sogon-choice-card {
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 2rem;
+  box-shadow: 0 14px 36px rgba(223, 100, 127, 0.1);
+}
