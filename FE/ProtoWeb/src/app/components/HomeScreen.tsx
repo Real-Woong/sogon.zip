@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { ZipBadge } from './shared/ZipBadge';
 import { ChevronRight, Sparkles, Calendar as CalendarIcon, FolderOpen, Heart, Plus, Bell } from 'lucide-react';
-import { getProfile, getReceivedSogonFiles, getSogonFiles, getUserPreferences, ReceivedSogonFile, saveReceivedSogonFiles } from '../lib/sogonStore';
+import { getProfile, getReceivedSogonFiles, getSogonFiles, getUserPreferences, ReceivedSogonFile, saveReceivedSogonFiles, syncRemoteData } from '../lib/sogonStore';
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const profile = getProfile();
-  const files = getSogonFiles();
-  const preferences = getUserPreferences();
+  const [profile, setProfile] = useState(() => getProfile());
+  const [files, setFiles] = useState(() => getSogonFiles());
+  const [preferences, setPreferences] = useState(() => getUserPreferences());
   const [receivedFiles, setReceivedFiles] = useState<ReceivedSogonFile[]>(() => getReceivedSogonFiles());
   const upcomingCount = files.filter(file => file.status === 'scheduled' || file.status === 'ready').length;
   const openedCount = files.filter(file => file.status === 'opened').length;
@@ -19,6 +19,14 @@ export function HomeScreen() {
     : profile?.nickname;
 
   useEffect(() => {
+    syncRemoteData()
+      .then(() => {
+        setProfile(getProfile());
+        setFiles(getSogonFiles());
+        setPreferences(getUserPreferences());
+      })
+      .catch(() => undefined);
+
     fetch('/prototype-inbox.json', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : null)
       .then((data: { files?: ReceivedSogonFile[] } | null) => {

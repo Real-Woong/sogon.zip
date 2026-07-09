@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-const inboxPath = resolve('public/prototype-inbox.json');
+const inboxPath = resolve('FE/ProtoWeb/public/prototype-inbox.json');
 
 const receivedFile = {
   id: `seoyeon-${Date.now()}`,

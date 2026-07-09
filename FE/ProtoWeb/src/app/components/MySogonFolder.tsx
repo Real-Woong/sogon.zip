@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { SogonFileCard } from './shared/SogonFileCard';
 import { ChevronLeft, X } from 'lucide-react';
-import { getSogonFiles, SogonFile, SogonFileStatus, updateSogonFile } from '../lib/sogonStore';
+import { getSogonFiles, SogonFile, SogonFileStatus, syncRemoteData, updateSogonFile } from '../lib/sogonStore';
 
 export function MySogonFolder() {
   const navigate = useNavigate();
@@ -58,6 +58,17 @@ export function MySogonFolder() {
   const [timingFile, setTimingFile] = useState<SogonFile | null>(null);
   const [draftContent, setDraftContent] = useState('');
   const [draftTiming, setDraftTiming] = useState('');
+
+  useEffect(() => {
+    syncRemoteData()
+      .then(() => {
+        const storedFiles = getSogonFiles();
+        if (storedFiles.length > 0) {
+          setFiles(storedFiles);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const tabs = ['열릴 예정', '열 준비됨', '열림', '닫아둠'];
   const tabStatus: Record<string, SogonFileStatus> = {

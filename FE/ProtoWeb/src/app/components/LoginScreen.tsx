@@ -2,23 +2,33 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { Heart, LockKeyhole, UserRound } from 'lucide-react';
-import { signInPrototypeUser } from '../lib/sogonStore';
+import { signInBetaUser, signInPrototypeUser } from '../lib/sogonStore';
 
 export function LoginScreen() {
   const navigate = useNavigate();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSubmitting(true);
+    setError('');
 
-    if (signInPrototypeUser(id, password)) {
+    try {
+      await signInBetaUser(id, password);
       navigate('/home');
       return;
+    } catch {
+      if (signInPrototypeUser(id, password)) {
+        navigate('/home');
+        return;
+      }
     }
 
     setError('아이디 또는 비밀번호를 다시 확인해주세요.');
+    setIsSubmitting(false);
   };
 
   return (
@@ -83,9 +93,10 @@ export function LoginScreen() {
 
         <button
           type="submit"
+          disabled={isSubmitting}
           className="sogon-primary-button mt-3 flex w-full items-center justify-center gap-2 font-bold"
         >
-          들어가기
+          {isSubmitting ? '확인 중...' : '들어가기'}
           <Heart className="h-5 w-5 fill-current" />
         </button>
       </form>
@@ -95,7 +106,7 @@ export function LoginScreen() {
         <p className="mt-2 text-sm text-[color:var(--navy)]">ID: 김진웅</p>
         <p className="text-sm text-[color:var(--navy)]">비밀번호: 1234</p>
         <p className="mt-3 text-xs leading-relaxed text-[color:var(--gray)]">
-          연인 프로필은 임시로 서연으로 연결해두었어요.
+          D1 연결 후에는 친구별 베타 계정으로 로그인할 수 있어요.
         </p>
       </div>
     </div>

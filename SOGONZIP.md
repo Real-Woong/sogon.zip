@@ -1,6 +1,6 @@
 # Sogon.zip Project Context
 
-Last updated: 2026-06-05
+Last updated: 2026-07-09
 
 이 문서는 사람과 agent가 Sogon.zip 프로젝트의 방향을 바로 이해하기 위한 기준 문서다. 새 작업을 시작하기 전에 먼저 이 파일을 읽고, 제품 방향과 현재 기술 상태를 벗어나지 않게 진행한다.
 
@@ -165,31 +165,64 @@ SogonZip/
   README.md
   SOGONZIP.md
   SogonZip_archive.md
+  BETA_DEPLOY.md
   package.json
-  src/
-    app/
-      App.tsx
-      components/
-      lib/sogonStore.ts
-    styles/
-  apps/
-    mobile/
-      app.json
-      package.json
-      index.ts
-      src/App.tsx
+
+  FE/
+    # FE: ProtoWeb, currently deployed to Cloudflare Pages
+    ProtoWeb/
+      public/
+      src/
+        main.tsx
+        app/
+          App.tsx
+          components/
+          lib/sogonStore.ts
+        styles/
+
+    # FE: Native app direction, Expo React Native
+    App/
+      mobile/
+        app.json
+        package.json
+        index.ts
+        src/App.tsx
+
+  BE/
+    # BE: Cloudflare Pages Functions source
+    functions/
+      api/
+        _shared.ts
+        auth/
+        rooms/
+        files/
+        preferences/
+
+    # BE: Cloudflare D1 schema migrations
+    migrations/
+      0001_beta_schema.sql
+
+  # Cloudflare Pages adapter. Keep this at repo root.
+  functions/
+    api/
+      ...
+
+  # Legacy / reference DB draft
+  DB-DEMO/
 ```
 
 ## Current Technical State
 
-There are two app surfaces right now.
+There are now three technical areas:
 
-### 1. Web Prototype
+1. FE / ProtoWeb
+2. FE / App
+3. BE / Beta API + D1
 
-Location:
+### FE / ProtoWeb
 
 ```text
-src/
+FE/ProtoWeb/
 ```
 
 Stack:
@@ -202,17 +235,24 @@ Stack:
 
 Purpose:
 
-- Existing Figma-derived prototype
-- Useful as visual and flow reference
-- Some local state is connected through `localStorage`
+- This is the current Cloudflare Pages beta surface.
+- It is a web prototype shaped like a mobile app.
+- Friends can open it through a `pages.dev` link without installing anything.
+- It still keeps a localStorage fallback so the UI does not break before D1 is connected.
+- When a beta user is logged in, it attempts to sync profile, files, and preferences through `/api/*`.
 
 Important files:
 
-- `src/app/App.tsx`: web routes
-- `src/app/components/CreateSogonFile.tsx`: web file creation screen
-- `src/app/components/MySogonFolder.tsx`: web folder/list screen
-- `src/app/components/HomeScreen.tsx`: web home screen
-- `src/app/lib/sogonStore.ts`: web localStorage helper
+- `FE/ProtoWeb/src/main.tsx`: React entry point.
+- `FE/ProtoWeb/src/app/App.tsx`: ProtoWeb routes.
+- `FE/ProtoWeb/src/app/components/LoginScreen.tsx`: beta login screen. It tries D1 login first, then falls back to the old prototype account.
+- `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: create a beta room or join one by invite code.
+- `FE/ProtoWeb/src/app/components/HomeScreen.tsx`: beta home. Syncs remote files/preferences after login.
+- `FE/ProtoWeb/src/app/components/CreateSogonFile.tsx`: create a Sogon file.
+- `FE/ProtoWeb/src/app/components/MySogonFolder.tsx`: list and edit Sogon files. Syncs remote files after login.
+- `FE/ProtoWeb/src/app/components/PlusPlanModal.tsx`: currently used as MY/preference DB input surface.
+- `FE/ProtoWeb/src/app/lib/sogonStore.ts`: ProtoWeb data boundary. It wraps localStorage and Cloudflare API calls.
+- `FE/ProtoWeb/public/_redirects`: Cloudflare Pages SPA redirect rule.
 
 Run:
 
@@ -230,14 +270,14 @@ yarn build
 Known status:
 
 - `yarn build` passes.
-- npm audit was previously clean after updating `react-router`; use `yarn npm audit --environment production` for Yarn-based audit checks.
+- Cloudflare Pages build command: `corepack enable && yarn install --immutable && yarn build`
+- Cloudflare Pages output directory: `dist`
+- Cloudflare framework preset can be `None` or `Custom` if `Vite` is not shown. Do not choose `VitePress`.
 
-### 2. Mobile App
-
-Location:
+### FE / App
 
 ```text
-apps/mobile/
+FE/App/mobile/
 ```
 
 Stack:
@@ -251,14 +291,15 @@ Stack:
 Purpose:
 
 - This is the real app direction.
-- New development should generally happen here first.
-- The web prototype can remain as reference unless explicitly asked to remove it.
+- It is the future native mobile app.
+- It is not the current deployed beta surface.
+- The ProtoWeb app remains the fastest way to test with friends.
 
 Important files:
 
-- `apps/mobile/src/App.tsx`: current native MVP in one file
-- `apps/mobile/app.json`: Expo app config
-- `apps/mobile/package.json`: mobile scripts and dependencies
+- `FE/App/mobile/src/App.tsx`: current native MVP in one file
+- `FE/App/mobile/app.json`: Expo app config
+- `FE/App/mobile/package.json`: mobile scripts and dependencies
 
 Run:
 
@@ -291,6 +332,66 @@ Known status:
 - Expo Metro Bundler has been verified to start.
 - Current local Node was `v20.12.2`, but Expo SDK 56 expects `>=20.19.4`. Upgrade Node before serious mobile development.
 
+### BE / Beta API
+
+```text
+BE/functions/api/
+```
+
+Stack:
+
+- Cloudflare Pages Functions
+- TypeScript
+- Cloudflare D1
+- Lightweight token model using the member id as the bearer token for beta testing
+
+Purpose:
+
+- Give each friend their own beta account.
+- Let a friend create a room/couple archive.
+- Let another friend join that room with an invite code.
+- Store Sogon files and preference DB entries by room, not by each browser.
+- Keep the backend small enough to stay free and easy to replace later.
+
+Important files:
+
+- `BE/functions/api/_shared.ts`: shared API helpers, JSON responses, id generation, password hashing, auth lookup.
+- `BE/functions/api/auth/login.ts`: beta account login.
+- `BE/functions/api/auth/me.ts`: current member/profile lookup.
+- `BE/functions/api/rooms/create.ts`: create a room and first owner account.
+- `BE/functions/api/rooms/join.ts`: join an existing room by invite code.
+- `BE/functions/api/files/index.ts`: list and create Sogon files for the current room.
+- `BE/functions/api/files/[id].ts`: update a Sogon file in the current room.
+- `BE/functions/api/preferences/index.ts`: list and create preference DB entries for the current room.
+- `functions/api/*`: Cloudflare Pages root adapter that re-exports from `BE/functions/api/*`. Do not put business logic here.
+
+Cloudflare requirement:
+
+- Create a D1 database, for example `sogonzip-db`.
+- Run `BE/migrations/0001_beta_schema.sql` in that D1 database.
+- Bind the database to the Pages project with variable name `DB`.
+- Redeploy after adding the binding.
+
+### BE / D1 Data Model
+
+```text
+BE/migrations/0001_beta_schema.sql
+```
+
+Tables:
+
+- `rooms`: one couple/friend archive room. Has an `invite_code`.
+- `members`: beta login accounts. Each member belongs to one room.
+- `sogon_files`: private files saved inside a room.
+- `preferences`: recommendation preference DB entries saved inside a room.
+
+Important beta limitation:
+
+- This is not full production authentication.
+- Passwords are SHA-256 hashed with a project prefix, but there is no email verification or password reset.
+- Bearer tokens are member ids, which is acceptable only for early private beta testing.
+- Before public release, replace this with real auth/session handling.
+
 ## Mobile MVP Implemented So Far
 
 The native app currently includes:
@@ -321,20 +422,27 @@ The native app does not yet include:
 
 ## Recommended Development Direction
 
-The project should move toward a real mobile app, not a web-only product.
+The project should move toward a real mobile app, but the current friend beta should run through ProtoWeb + Cloudflare BE.
 
 Recommended near-term direction:
 
-1. Keep web prototype as reference.
-2. Continue native development in `apps/mobile`.
-3. Split `apps/mobile/src/App.tsx` into screens, components, and domain modules once the next feature lands.
-4. Add persistent local storage with `@react-native-async-storage/async-storage`.
-5. Add proper navigation with Expo Router or React Navigation.
-6. Add a backend only after the local product loop feels correct.
+1. Stabilize ProtoWeb beta with D1-backed accounts and room data.
+2. Fix core flow gaps in ProtoWeb: selected-file unzip, opened status transition, better empty states.
+3. Use beta feedback to decide the exact native app flow.
+4. Continue native development in `FE/App/mobile`.
+5. Split `FE/App/mobile/src/App.tsx` into screens, components, and domain modules once the next native feature lands.
+6. Reuse the BE contract from `BE/functions/api` when the native app starts talking to a real backend.
 
 ## Next Development Priorities
 
 ### Priority 1: Native App Foundation
+
+Current priority before returning to native foundation:
+
+- Finish D1 setup on Cloudflare.
+- Redeploy Pages with the `DB` binding.
+- Test account creation with one real friend.
+- Confirm two accounts can see the same room data.
 
 - Add persistent storage for profile and files.
 - Split mobile app into:
@@ -387,15 +495,15 @@ Recommendation output should never expose private file content directly before o
 
 ### Priority 5: Backend
 
-Only after native local loop is solid.
+Backend has started as a small Cloudflare Pages Functions + D1 beta backend.
 
-Possible backend choices:
+Do not expand it into a large custom server yet. Keep it focused on:
 
-- Supabase: fastest for auth, database, realtime
-- Firebase: good mobile fit and notifications
-- Custom backend: later, if product complexity requires it
-
-Do not prematurely build backend before the core UX is validated.
+- Beta account login
+- Room creation and invite-code join
+- Room-scoped Sogon files
+- Room-scoped preference DB
+- Minimal future admin visibility for beta data
 
 ## UX Rules For Future Work
 
@@ -461,13 +569,17 @@ Unzip confirmation:
 
 ## Technical Notes For Agents
 
-- Prefer editing `apps/mobile` for new app work.
-- Do not delete the web prototype unless the user explicitly asks.
+- Explain every code change by FE/ProtoWeb, FE/App, or BE.
+- For current ProtoWeb work, edit `FE/ProtoWeb/`.
+- For current BE work, edit `BE/functions/` and `BE/migrations/`.
+- Keep root `functions/` as Cloudflare adapter files only.
+- For native app work, edit `FE/App/mobile/`.
+- Do not delete ProtoWeb unless the user explicitly asks.
 - Use `rg` or `rg --files` for search.
 - Use `apply_patch` for manual edits.
 - Do not run forced audit fixes blindly. They may downgrade Expo or create breaking changes.
 - Expo SDK 56 requires Node `>=20.19.4`; if local start behaves strangely, check Node first.
-- Avoid introducing backend or auth before the local product loop is complete.
+- Keep the BE small. Do not add paid services or heavy auth unless explicitly requested.
 - Keep UI copy Korean unless asked otherwise.
 - Keep visual tone soft, private, and file-archive inspired.
 
@@ -478,6 +590,20 @@ Web:
 ```bash
 yarn build
 yarn npm audit --environment production
+```
+
+Backend:
+
+```bash
+yarn build
+```
+
+Cloudflare setup:
+
+```text
+Pages project > Settings > Bindings > Add > D1 database
+Variable name: DB
+Database: sogonzip-db
 ```
 
 Mobile:
@@ -499,9 +625,10 @@ yarn workspace sogonzip-mobile start
 - Should Sogon File support multiple tags or one primary tag plus secondary tags?
 - Should open timing be calendar-date based or relationship-day based first?
 - Should "추천에 반영하기" be disabled for highest sensitivity by default?
-- Should the first backend be Supabase or Firebase?
+- How much admin visibility should the beta owner have over friends' couple rooms?
+- Should beta accounts be created only by friends inside the app, or should the owner pre-create accounts?
 - Should the app support both couples and friends at launch, or focus on couples first?
 
 ## Short Agent Brief
 
-Build Sogon.zip as a real Expo React Native mobile app. It is a Korean relationship archive app where close people save private preference files, let those files influence recommendations without revealing content, and only open files after explicit owner confirmation. Preserve the soft file/folder/zip metaphor. Continue development in `apps/mobile`; keep the web prototype as reference.
+Build Sogon.zip as a Korean relationship archive app where close people save private preference files, let those files influence recommendations without revealing content, and only open files after explicit owner confirmation. Preserve the soft file/folder/zip metaphor. Current beta work is split into FE/ProtoWeb in `FE/ProtoWeb/`, FE/App in `FE/App/mobile/`, and BE in `BE/functions/` + `BE/migrations/`. For every future code change, explain which area changed and why.

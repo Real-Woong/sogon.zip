@@ -13,7 +13,7 @@ Last updated: 2026-06-18
 - 내 입장: 코드 push 후 자동 재배포 가능
 - 현재 코드 상태: Vite 웹 프로토타입이 이미 `yarn build` 통과
 
-TestFlight는 정식 iOS 베타 배포에는 좋지만 Apple Developer Program 비용이 필요하다. Expo Go 공유는 빠르게 보여주기에는 괜찮지만, 현재 완성도가 높은 화면은 `src/`의 웹 프로토타입이라 베타 테스트용으로는 웹 배포가 더 안정적이다.
+TestFlight는 정식 iOS 베타 배포에는 좋지만 Apple Developer Program 비용이 필요하다. Expo Go 공유는 빠르게 보여주기에는 괜찮지만, 현재 완성도가 높은 화면은 `FE/ProtoWeb/`의 웹 프로토타입이라 베타 테스트용으로는 웹 배포가 더 안정적이다.
 
 ## 배포 전 로컬 확인
 
@@ -36,7 +36,7 @@ Build output directory: dist
 Root directory: /
 ```
 
-`public/_redirects` 파일이 있어서 `/home` 같은 내부 페이지 주소로 직접 들어가거나 새로고침해도 `index.html`로 돌아간다.
+`FE/ProtoWeb/public/_redirects` 파일이 있어서 `/home` 같은 내부 페이지 주소로 직접 들어가거나 새로고침해도 `index.html`로 돌아간다.
 
 ## Step By Step
 

@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "yarn@4.3.1",
   "workspaces": [
-    "apps/mobile"
+    "FE/App/mobile"
   ],
   "scripts": {
     "build": "vite build",
