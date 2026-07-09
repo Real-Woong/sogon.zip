@@ -185,7 +185,7 @@ export function CreateJoinRoom() {
                   setPartnerCode(event.target.value.toUpperCase());
                   setError('');
                 }}
-                placeholder="예: A7K92QMD"
+                placeholder="상대 계정 코드"
                 className="w-full rounded-xl border border-[color:var(--border)] bg-white px-4 py-4 text-center text-xl font-black tracking-[0.12em] text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
               />
             </label>

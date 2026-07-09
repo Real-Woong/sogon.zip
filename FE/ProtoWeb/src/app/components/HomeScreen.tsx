@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { ZipBadge } from './shared/ZipBadge';
-import { ChevronRight, Sparkles, Calendar as CalendarIcon, FolderOpen, Heart, Plus, Bell } from 'lucide-react';
-import { getProfile, getReceivedSogonFiles, getSogonFiles, getUserPreferences, ReceivedSogonFile, saveReceivedSogonFiles, syncRemoteData } from '../lib/sogonStore';
+import { ChevronRight, Sparkles, Calendar as CalendarIcon, FolderOpen, Heart, Plus } from 'lucide-react';
+import { getProfile, getSogonFiles, getUserPreferences, syncRemoteData } from '../lib/sogonStore';
 
 export function HomeScreen() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(() => getProfile());
   const [files, setFiles] = useState(() => getSogonFiles());
   const [preferences, setPreferences] = useState(() => getUserPreferences());
-  const [receivedFiles, setReceivedFiles] = useState<ReceivedSogonFile[]>(() => getReceivedSogonFiles());
   const upcomingCount = files.filter(file => file.status === 'scheduled' || file.status === 'ready').length;
   const openedCount = files.filter(file => file.status === 'opened').length;
-  const latestReceivedFile = receivedFiles[0];
+  const preferenceProgress = Math.min(100, preferences.length * 20);
   const coupleLabel = profile?.partnerNickname
     ? `${profile.nickname} x ${profile.partnerNickname}`
     : profile?.nickname;
@@ -24,23 +23,6 @@ export function HomeScreen() {
         setProfile(getProfile());
         setFiles(getSogonFiles());
         setPreferences(getUserPreferences());
-      })
-      .catch(() => undefined);
-
-    fetch('/prototype-inbox.json', { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : null)
-      .then((data: { files?: ReceivedSogonFile[] } | null) => {
-        if (!data?.files?.length) {
-          return;
-        }
-
-        const storedFiles = getReceivedSogonFiles();
-        const mergedFiles = [
-          ...data.files.filter(file => !storedFiles.some(storedFile => storedFile.id === file.id)),
-          ...storedFiles
-        ];
-        saveReceivedSogonFiles(mergedFiles);
-        setReceivedFiles(mergedFiles);
       })
       .catch(() => undefined);
   }, []);
@@ -75,7 +57,10 @@ export function HomeScreen() {
             <Sparkles className="h-6 w-6 text-[color:var(--yellow)]" />
           </div>
           <div className="h-2 rounded-full bg-white/15">
-            <div className="h-2 w-[74%] rounded-full bg-[linear-gradient(90deg,var(--pink),var(--yellow),var(--mint))]" />
+            <div
+              className="h-2 rounded-full bg-[linear-gradient(90deg,var(--pink),var(--yellow),var(--mint))]"
+              style={{ width: `${preferenceProgress}%` }}
+            />
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[`취향 ${preferences.length}개`, '상대 취향', '오늘 코스'].map((label) => (
@@ -88,31 +73,6 @@ export function HomeScreen() {
       </div>
 
       <div className="flex-1 px-6 pb-24 space-y-4 overflow-y-auto scrollbar-hide">
-        {latestReceivedFile ? (
-          <div
-            onClick={() => navigate('/received')}
-            className="mx-auto flex min-h-[152px] w-full max-w-[366px] cursor-pointer flex-col justify-center rounded-[2rem] bg-[color:var(--blush)] p-5 shadow-[0_14px_36px_rgba(223,100,127,0.16)] ring-1 ring-[color:var(--pink)]/60 transition-all hover:-translate-y-0.5"
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[color:var(--coral-deep)]">
-                  <Bell className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[color:var(--coral-deep)]">NEW SOGON</p>
-                  <h2 className="font-black text-[color:var(--navy)]">
-                    {latestReceivedFile.sender}의 소곤.zip 도착
-                  </h2>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-[color:var(--gray)]" />
-            </div>
-            <p className="text-sm leading-relaxed text-[color:var(--gray)]">
-              {latestReceivedFile.title}을 지금 압축해제할 수 있어요.
-            </p>
-          </div>
-        ) : null}
-
         <div
           onClick={() => navigate('/recommendation')}
           className="mx-auto flex min-h-[190px] w-full max-w-[366px] cursor-pointer flex-col justify-between rounded-[2rem] bg-white p-5 shadow-[0_14px_36px_rgba(223,100,127,0.13)] ring-1 ring-[color:var(--pink)]/55 transition-all hover:-translate-y-0.5 hover:shadow-lg"
@@ -130,7 +90,7 @@ export function HomeScreen() {
             <ChevronRight className="w-5 h-5 text-[color:var(--gray)]" />
           </div>
           <p className="text-sm text-[color:var(--gray)] mb-4 leading-relaxed">
-            내 취향과 서연의 소곤.zip을 압축해제해서 오늘 코스로 풀어봤어요.
+            저장된 취향을 바탕으로 추천 기능을 준비하고 있어요.
           </p>
           <button className="sogon-primary-button w-full font-bold transition-colors">
             오늘의 추천 압축해제

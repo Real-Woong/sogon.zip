@@ -2,60 +2,45 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getSogonFiles } from '../lib/sogonStore';
+
+type RecordEvent = {
+  stamp: string;
+  title: string;
+  file: string;
+  content: string;
+  dateLabel: string;
+};
+
+function toDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function toDateLabel(date: Date) {
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
 
 export function RecordCalendar() {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(() => new Date(2026, 4, 1));
-  const [selectedDate, setSelectedDate] = useState('2026-05-28');
+  const openedFiles = getSogonFiles().filter(file => file.status === 'opened');
+  const events = openedFiles.reduce<Record<string, RecordEvent>>((acc, file) => {
+    const date = new Date(file.createdAt);
+    const dateKey = toDateKey(date);
+    acc[dateKey] = {
+      stamp: '🎁',
+      title: `${file.tags[0] ?? '소곤.zip'}을 열어본 날`,
+      file: `${file.tags[0] ?? '소곤'}.zip`,
+      content: file.content,
+      dateLabel: toDateLabel(date)
+    };
+    return acc;
+  }, {});
+  const firstEventDate = Object.keys(events)[0];
+  const initialDate = firstEventDate ? new Date(firstEventDate) : new Date();
+  const [currentDate, setCurrentDate] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(firstEventDate ?? toDateKey(new Date()));
 
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
-  const events: Record<string, { stamp: string; dday: string; title: string; file: string; content: string; reaction: string; dateLabel: string }> = {
-    '2026-05-05': {
-      stamp: '📅',
-      dday: 'D+77',
-      title: '어린이날 데이트를 기록한 날',
-      file: '데이트코스.zip',
-      content: '사람 많은 곳보다 조용히 걷는 데이트가 좋아.',
-      reaction: '다음엔 강변 산책하자.',
-      dateLabel: '2026년 5월 5일'
-    },
-    '2026-05-12': {
-      stamp: '🍽',
-      dday: 'D+84',
-      title: '음식 취향을 알게 된 날',
-      file: '음식취향.zip',
-      content: '사실 나는 매운 음식을 잘 못 먹어.',
-      reaction: '말해줘서 고마워.',
-      dateLabel: '2026년 5월 12일'
-    },
-    '2026-05-20': {
-      stamp: '☕',
-      dday: 'D+92',
-      title: '카페 취향이 맞았던 날',
-      file: '카페취향.zip',
-      content: '창가 자리와 따뜻한 라떼가 있는 곳이 좋아.',
-      reaction: '이 분위기 기억해둘게.',
-      dateLabel: '2026년 5월 20일'
-    },
-    '2026-05-28': {
-      stamp: '🎁',
-      dday: 'D+100',
-      title: '우리가 하나 더 가까워진 날',
-      file: '음식취향.zip',
-      content: '사실 나는 매운 음식을 잘 못 먹어.',
-      reaction: '말해줘서 고마워.',
-      dateLabel: '2026년 5월 28일'
-    },
-    '2026-06-12': {
-      stamp: '💬',
-      dday: 'D+115',
-      title: '서연의 소곤.zip이 도착한 날',
-      file: '카페취향.zip',
-      content: '다음 데이트는 조용한 창가 자리 있는 카페였으면 좋겠어.',
-      reaction: '이번 주말에 같이 가자.',
-      dateLabel: '2026년 6월 12일'
-    }
-  };
   const currentMonth = `${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월`;
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
   const lastDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -65,8 +50,7 @@ export function RecordCalendar() {
   ];
   const selectedEvent = events[selectedDate];
 
-  const formatDateKey = (day: number) =>
-    `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const formatDateKey = (day: number) => toDateKey(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
 
   const changeMonth = (offset: number) => {
     setCurrentDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() + offset, 1));
@@ -156,10 +140,6 @@ export function RecordCalendar() {
               <p className="text-sm text-[color:var(--gray)] ml-7 mb-3 italic">
                 "{selectedEvent.content}"
               </p>
-              <div className="ml-7 bg-[color:var(--lavender)]/10 rounded-xl p-3 inline-flex items-center gap-2">
-                <span className="text-lg">🫶</span>
-                <p className="text-sm text-[color:var(--navy)]">"{selectedEvent.reaction}"</p>
-              </div>
             </div>
           ) : null}
 
@@ -177,24 +157,8 @@ export function RecordCalendar() {
               <span className="text-[color:var(--gray)]">열림</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">🔒</span>
-              <span className="text-[color:var(--gray)]">닫힘</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🍽</span>
-              <span className="text-[color:var(--gray)]">음식</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">☕</span>
-              <span className="text-[color:var(--gray)]">카페</span>
-            </div>
-            <div className="flex items-center gap-2">
               <span className="text-lg">📅</span>
-              <span className="text-[color:var(--gray)]">기념일</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">💬</span>
-              <span className="text-[color:var(--gray)]">답장</span>
+              <span className="text-[color:var(--gray)]">기록일</span>
             </div>
           </div>
         </div>

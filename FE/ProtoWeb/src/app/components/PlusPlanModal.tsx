@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
-import { Check, Crown, Plus, FolderHeart, Database } from 'lucide-react';
+import { Plus, FolderHeart, Database } from 'lucide-react';
 import { getUserPreferences, saveUserPreference, UserPreference } from '../lib/sogonStore';
 
 export function PlusPlanModal() {
@@ -10,26 +10,16 @@ export function PlusPlanModal() {
   const [preferenceText, setPreferenceText] = useState('');
   const [preferences, setPreferences] = useState<UserPreference[]>(() => getUserPreferences());
 
-  const features = [
-    '소곤.zip 100개',
-    '커스텀 태그',
-    '사진 소곤.zip',
-    '기록.zip 테마',
-    '기념일 알림',
-    '월간 리포트',
-    'AI 추천.zip 월 20회'
-  ];
-
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
       {/* Header */}
       <div className="px-6 py-8 bg-gradient-to-br from-[color:var(--lavender)] to-[color:var(--pink)] text-white">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <Crown className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">Sogon.zip Plus</h1>
+          <Database className="w-6 h-6" />
+          <h1 className="text-2xl font-bold">MY</h1>
         </div>
         <p className="text-center text-white/90 text-sm">
-          소중한 소곤.zip을 더 오래, 더 예쁘게 보관하세요.
+          내 취향과 소곤.zip을 관리해요.
         </p>
       </div>
 
@@ -121,54 +111,6 @@ export function PlusPlanModal() {
           </button>
         </div>
 
-        {/* Features */}
-        <div className="bg-white rounded-3xl p-6 border-2 border-[color:var(--lavender)]/20 shadow-lg mb-6">
-          <h3 className="font-bold text-[color:var(--navy)] mb-4">Plus 혜택</h3>
-          <div className="space-y-3">
-            {features.map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[color:var(--lavender)]/10 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-4 h-4 text-[color:var(--lavender)]" />
-                </div>
-                <p className="text-[color:var(--navy)]">{feature}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Price */}
-        <div className="bg-gradient-to-br from-[color:var(--yellow)]/20 to-white rounded-3xl p-6 border-2 border-[color:var(--yellow)]/50 shadow-lg mb-6 text-center">
-          <p className="text-sm text-[color:var(--gray)] mb-1">월 구독료</p>
-          <p className="text-4xl font-bold text-[color:var(--navy)] mb-1">
-            8,900<span className="text-xl">원</span>
-          </p>
-          <p className="text-xs text-[color:var(--gray)]">첫 달 50% 할인</p>
-        </div>
-
-        {/* Info */}
-        <div className="bg-[color:var(--gray-light)] rounded-2xl p-4">
-          <p className="text-xs text-[color:var(--gray)] leading-relaxed">
-            • 언제든지 해지 가능해요<br />
-            • Plus 해지 후에도 기존 소곤.zip은 유지돼요<br />
-            • Plus 전용 테마와 기능은 해지 시 사용 불가해요
-          </p>
-        </div>
-
-        {/* CTA */}
-        <button className="w-full bg-gradient-to-r from-[color:var(--lavender)] to-[color:var(--pink)] text-white py-4 rounded-2xl shadow-lg hover:shadow-xl transition-shadow mt-6 font-bold">
-          Plus 시작하기
-        </button>
-
-        {/* Free features */}
-        <div className="mt-8 pt-6 border-t border-[color:var(--border)]">
-          <h4 className="text-sm font-medium text-[color:var(--navy)] mb-3">무료 플랜</h4>
-          <div className="space-y-2 text-sm text-[color:var(--gray)]">
-            <p>• 소곤.zip 20개</p>
-            <p>• 기본 태그 사용</p>
-            <p>• 기본 추천.zip</p>
-            <p>• 기록.zip 기본 테마</p>
-          </div>
-        </div>
       </div>
 
       <BottomNav />

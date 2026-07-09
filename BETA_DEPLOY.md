@@ -19,7 +19,6 @@ TestFlight는 정식 iOS 베타 배포에는 좋지만 Apple Developer Program �
 
 ```bash
 yarn install
-yarn mock:receive
 yarn build
 ```
 

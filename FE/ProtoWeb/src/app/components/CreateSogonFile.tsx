@@ -101,7 +101,7 @@ export function CreateSogonFile() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="예: 사실 나는 매운 음식을 잘 못 먹어."
+            placeholder="상대에게 언젠가 열어주고 싶은 내용을 적어주세요."
             className="w-full h-32 px-4 py-3 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] resize-none text-[color:var(--navy)]"
           />
         </div>

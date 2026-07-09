@@ -9,8 +9,7 @@
   ],
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
-    "mock:receive": "node scripts/receive-seoyeon-sogon.mjs"
+    "dev": "vite"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

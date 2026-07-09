@@ -8,52 +8,7 @@ import { getSogonFiles, SogonFile, SogonFileStatus, syncRemoteData, updateSogonF
 export function MySogonFolder() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('열릴 예정');
-  const demoFiles: SogonFile[] = [
-    {
-      id: 'demo-food',
-      tags: ['음식취향'],
-      content: '사실 나는 매운 음식을 잘 못 먹어.',
-      sensitivity: '😀',
-      openingTime: 'D+100 열림 예정',
-      recommendationOn: true,
-      status: 'scheduled',
-      createdAt: '2026-05-01T00:00:00.000Z'
-    },
-    {
-      id: 'demo-allergy',
-      tags: ['알레르기'],
-      content: '새우 알레르기가 있어서 해산물은 조심하고 싶어.',
-      sensitivity: '😣',
-      openingTime: 'D+100 열림 예정',
-      recommendationOn: true,
-      status: 'scheduled',
-      createdAt: '2026-05-01T00:00:00.000Z'
-    },
-    {
-      id: 'demo-date',
-      tags: ['데이트 취향'],
-      content: '사람 많은 곳보다 조용히 걷는 데이트가 좋아.',
-      sensitivity: '🙂',
-      openingTime: '오늘 열 수 있어요',
-      recommendationOn: true,
-      status: 'ready',
-      createdAt: '2026-05-28T00:00:00.000Z'
-    },
-    {
-      id: 'demo-cafe',
-      tags: ['카페취향'],
-      content: '창가 자리와 따뜻한 라떼가 있는 카페가 좋아.',
-      sensitivity: '🙂',
-      openingTime: 'D+50에 열렸어요',
-      recommendationOn: true,
-      status: 'opened',
-      createdAt: '2026-05-12T00:00:00.000Z'
-    }
-  ];
-  const [files, setFiles] = useState<SogonFile[]>(() => {
-    const storedFiles = getSogonFiles();
-    return storedFiles.length > 0 ? storedFiles : demoFiles;
-  });
+  const [files, setFiles] = useState<SogonFile[]>(() => getSogonFiles());
   const [editingFile, setEditingFile] = useState<SogonFile | null>(null);
   const [timingFile, setTimingFile] = useState<SogonFile | null>(null);
   const [draftContent, setDraftContent] = useState('');
@@ -61,12 +16,7 @@ export function MySogonFolder() {
 
   useEffect(() => {
     syncRemoteData()
-      .then(() => {
-        const storedFiles = getSogonFiles();
-        if (storedFiles.length > 0) {
-          setFiles(storedFiles);
-        }
-      })
+      .then(() => setFiles(getSogonFiles()))
       .catch(() => undefined);
   }, []);
 
@@ -93,9 +43,7 @@ export function MySogonFolder() {
       currentFile.id === file.id ? { ...currentFile, ...nextPatch } : currentFile
     ));
 
-    if (!file.id.startsWith('demo-')) {
-      updateSogonFile(file.id, nextPatch);
-    }
+    updateSogonFile(file.id, nextPatch);
   };
 
   const openEditModal = (file: SogonFile) => {
@@ -185,10 +133,16 @@ export function MySogonFolder() {
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-24 space-y-4">
         {visibleFiles.map(renderSavedFile)}
 
-        {visibleFiles.length === 0 && activeTab === '닫아둠' && (
+        {visibleFiles.length === 0 && (
           <div className="text-center py-12 text-[color:var(--gray)]">
-            <p className="text-4xl mb-4">🔒</p>
-            <p>닫아둔 소곤.zip이 없어요</p>
+            <p className="text-4xl mb-4">📦</p>
+            <p>{activeTab} 소곤.zip이 없어요</p>
+            <button
+              onClick={() => navigate('/create-file')}
+              className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[color:var(--navy)] ring-1 ring-[color:var(--border)]"
+            >
+              새 소곤.zip 만들기
+            </button>
           </div>
         )}
       </div>

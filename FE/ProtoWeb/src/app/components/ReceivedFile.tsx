@@ -6,12 +6,7 @@ import { getReceivedSogonFiles } from '../lib/sogonStore';
 export function ReceivedFile() {
   const navigate = useNavigate();
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
-  const receivedFile = getReceivedSogonFiles()[0] ?? {
-    sender: '서연',
-    title: '카페취향.zip',
-    content: '다음 데이트는 조용한 창가 자리 있는 카페였으면 좋겠어.',
-    message: '진웅아, 이번 주말에 같이 가보고 싶은 분위기야.'
-  };
+  const receivedFile = getReceivedSogonFiles()[0];
 
   const reactions = [
     { emoji: '🫶', label: '말해줘서 고마워' },
@@ -38,7 +33,8 @@ export function ReceivedFile() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 pb-32">
+      {receivedFile ? (
+        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 pb-32">
         <div className="text-center">
           <h2 className="text-xl font-bold text-[color:var(--navy)] mb-2">
             {receivedFile.sender}의 소곤.zip이 도착했어요
@@ -93,7 +89,16 @@ export function ReceivedFile() {
             답장 남기기
           </button>
         </div>
-      </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <p className="text-5xl mb-5">📭</p>
+          <h2 className="text-xl font-black text-[color:var(--navy)]">받은 소곤.zip이 없어요</h2>
+          <p className="mt-3 text-sm leading-relaxed text-[color:var(--gray)]">
+            내 사람과 연결한 뒤 열린 소곤.zip이 생기면 여기에 표시돼요.
+          </p>
+        </div>
+      )}
 
       {/* Bottom button */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)]">

@@ -35,7 +35,7 @@ export function IntroScreen() {
                 <div className="h-2 w-3/4 rounded-full bg-[color:var(--coral)]" />
               </div>
               <p className="text-xs leading-relaxed text-[color:var(--gray)]">
-                서로의 취향이 74% 더 가까워졌어요.
+                서로의 취향이 조금 더 선명해졌어요.
               </p>
             </div>
           </div>
@@ -46,10 +46,10 @@ export function IntroScreen() {
               <Sparkles className="h-5 w-5 text-[color:var(--lavender)]" />
             </div>
             <p className="text-xl font-bold leading-snug text-[color:var(--navy)]">
-              조용한 카페<br />창가 자리
+              오늘의 무드<br />함께 고르기
             </p>
             <p className="mt-3 text-xs leading-relaxed text-[color:var(--gray)]">
-              둘 다 저장한 무드로 추천했어요.
+              저장한 취향을 바탕으로 준비해요.
             </p>
           </div>
 
