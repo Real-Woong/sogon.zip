@@ -45,6 +45,11 @@ function statusFromOpeningTime(openingTime: string) {
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const member = await requireMember(request, env);
+
+  if (!member.room_id) {
+    return json({ files: [] });
+  }
+
   const rows = await all<FileRow>(env.DB.prepare(
     `SELECT id, tags_json, content, sensitivity, opening_time, recommendation_on, status, created_at
        FROM sogon_files
@@ -57,6 +62,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const member = await requireMember(request, env);
+
+  if (!member.room_id) {
+    return json({ error: '내 사람과 연결한 뒤 소곤파일을 공유할 수 있어요.' }, { status: 409 });
+  }
+
   const input = await readJson<CreateFileInput>(request);
   const content = input.content?.trim();
   const openingTime = input.openingTime ?? '내가 직접 열게요';

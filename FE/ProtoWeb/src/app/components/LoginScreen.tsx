@@ -43,7 +43,7 @@ export function LoginScreen() {
           로그인하고<br />우리 기록을 열어봐요
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-[color:var(--gray)]">
-          만든 계정으로 들어가거나, 처음이라면 둘만의 소곤방을 만들어주세요.
+          만든 계정으로 들어가거나, 처음이라면 계정을 만들고 내 사람과 연결해주세요.
         </p>
       </div>
 
@@ -100,14 +100,14 @@ export function LoginScreen() {
       <div className="mt-auto rounded-[2rem] bg-white/72 p-5 shadow-sm ring-1 ring-white">
         <p className="text-xs font-bold text-[color:var(--gray)]">처음 시작하나요?</p>
         <p className="mt-2 text-sm leading-relaxed text-[color:var(--navy)]">
-          아이디와 비밀번호를 만들고, 연인에게 줄 초대코드를 받을 수 있어요.
+          아이디와 비밀번호를 만들면 내 계정 코드가 생겨요. 그 코드로 서로를 찾아 연결할 수 있어요.
         </p>
         <button
           type="button"
           onClick={() => navigate('/create-room')}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[color:var(--coral-deep)] ring-1 ring-[color:var(--pink)]/60 transition-colors hover:bg-[color:var(--blush)]"
         >
-          회원가입하고 소곤방 만들기
+          회원가입하기
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

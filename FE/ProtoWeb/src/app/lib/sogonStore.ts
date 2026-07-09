@@ -1,9 +1,17 @@
 export type SogonProfile = {
   nickname: string;
   relationshipType?: 'lover' | 'friend';
+  accountCode?: string;
   partnerNickname?: string;
-  roomCode?: string;
+  partnerAccountCode?: string;
+  isConnected?: boolean;
   createdAt: string;
+};
+
+export type SogonPerson = {
+  nickname: string;
+  accountCode: string;
+  alreadyConnected?: boolean;
 };
 
 export type SogonFileStatus = 'scheduled' | 'ready' | 'opened' | 'closed';
@@ -124,13 +132,12 @@ export async function signInBetaUser(id: string, password: string) {
   return true;
 }
 
-export async function createBetaRoom(input: {
+export async function signUpBetaUser(input: {
   loginId: string;
   password: string;
   nickname: string;
-  relationshipType?: 'lover' | 'friend';
 }) {
-  const data = await apiFetch<{ token: string; inviteCode: string; profile: SogonProfile }>('/api/rooms/create', {
+  const data = await apiFetch<{ token: string; accountCode: string; profile: SogonProfile }>('/api/auth/signup', {
     method: 'POST',
     body: JSON.stringify(input)
   });
@@ -141,20 +148,20 @@ export async function createBetaRoom(input: {
   return data;
 }
 
-export async function joinBetaRoom(input: {
-  inviteCode: string;
-  loginId: string;
-  password: string;
-  nickname: string;
-}) {
-  const data = await apiFetch<{ token: string; profile: SogonProfile }>('/api/rooms/join', {
+export async function findPersonByCode(accountCode: string) {
+  const params = new URLSearchParams({ code: accountCode.trim().toUpperCase() });
+  return apiFetch<{ person: SogonPerson }>(`/api/people/find?${params.toString()}`);
+}
+
+export async function connectPerson(accountCode: string) {
+  const data = await apiFetch<{ profile: SogonProfile; partner: SogonPerson }>('/api/people/connect', {
     method: 'POST',
-    body: JSON.stringify(input)
+    body: JSON.stringify({ accountCode })
   });
 
-  saveToken(data.token);
   writeJson(sessionKey, true);
   writeJson(profileKey, data.profile);
+  await syncRemoteData();
   return data;
 }
 

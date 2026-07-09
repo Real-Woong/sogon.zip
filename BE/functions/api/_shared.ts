@@ -9,8 +9,9 @@ export type Env = {
 
 export type SessionMember = {
   id: string;
-  room_id: string;
+  room_id: string | null;
   login_id: string;
+  account_code: string;
   nickname: string;
   role: string;
 };
@@ -40,9 +41,9 @@ export function newId(prefix: string) {
   return `${prefix}_${token}`;
 }
 
-export function newInviteCode() {
+export function newAccountCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = new Uint8Array(6);
+  const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
 }
@@ -68,7 +69,7 @@ export async function requireMember(request: Request, env: Env) {
   }
 
   const member = await env.DB.prepare(
-    'SELECT id, room_id, login_id, nickname, role FROM members WHERE id = ?'
+    'SELECT id, room_id, login_id, account_code, nickname, role FROM members WHERE id = ?'
   ).bind(memberId).first<SessionMember>();
 
   if (!member) {
@@ -81,4 +82,32 @@ export async function requireMember(request: Request, env: Env) {
 export async function all<T>(statement: D1PreparedStatement) {
   const result = await statement.all<T>() as D1Result<T>;
   return result.results ?? [];
+}
+
+export async function findPartner(env: Env, member: SessionMember) {
+  if (!member.room_id) {
+    return null;
+  }
+
+  return env.DB.prepare(
+    `SELECT nickname, account_code
+       FROM members
+      WHERE room_id = ? AND id != ?
+      ORDER BY created_at ASC
+      LIMIT 1`
+  ).bind(member.room_id, member.id).first<{ nickname: string; account_code: string }>();
+}
+
+export async function buildProfile(env: Env, member: SessionMember) {
+  const partner = await findPartner(env, member);
+
+  return {
+    nickname: member.nickname,
+    accountCode: member.account_code,
+    relationshipType: 'lover' as const,
+    partnerNickname: partner?.nickname,
+    partnerAccountCode: partner?.account_code,
+    isConnected: Boolean(member.room_id && partner),
+    createdAt: new Date().toISOString()
+  };
 }

@@ -19,6 +19,11 @@ function statusFromOpeningTime(openingTime: string) {
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const member = await requireMember(request, env);
+
+  if (!member.room_id) {
+    return json({ error: '내 사람과 연결한 뒤 소곤파일을 수정할 수 있어요.' }, { status: 409 });
+  }
+
   const fileId = String(params.id);
   const input = await readJson<PatchFileInput>(request);
 

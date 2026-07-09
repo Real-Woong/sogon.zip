@@ -23,6 +23,11 @@ function toPreference(row: PreferenceRow) {
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const member = await requireMember(request, env);
+
+  if (!member.room_id) {
+    return json({ preferences: [] });
+  }
+
   const rows = await all<PreferenceRow>(env.DB.prepare(
     `SELECT id, category, text, created_at
        FROM preferences
@@ -35,6 +40,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const member = await requireMember(request, env);
+
+  if (!member.room_id) {
+    return json({ error: '내 사람과 연결한 뒤 취향 기록을 공유할 수 있어요.' }, { status: 409 });
+  }
+
   const input = await readJson<CreatePreferenceInput>(request);
   const category = input.category?.trim() || '기타';
   const text = input.text?.trim();

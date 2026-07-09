@@ -100,8 +100,8 @@ Avoid:
 2. Relationship selection
    연인 또는 친구와 시작할 관계 유형을 고른다.
 
-3. Create or join room
-   닉네임을 입력하고 소곤방을 만들거나 초대코드로 들어간다.
+3. Sign up and find my person
+   아이디/비밀번호로 가입하고, 상대의 계정 코드로 내 사람을 찾아 연결한다.
 
 4. Home
    오늘의 추천, 다가오는 소곤파일, 최근 기록을 본다.
@@ -129,7 +129,10 @@ Avoid:
 type SogonProfile = {
   nickname: string;
   relationshipType?: 'lover' | 'friend';
-  roomCode?: string;
+  accountCode?: string;
+  partnerNickname?: string;
+  partnerAccountCode?: string;
+  isConnected?: boolean;
   createdAt: string;
 };
 ```
@@ -246,7 +249,7 @@ Important files:
 - `FE/ProtoWeb/src/main.tsx`: React entry point.
 - `FE/ProtoWeb/src/app/App.tsx`: ProtoWeb routes.
 - `FE/ProtoWeb/src/app/components/LoginScreen.tsx`: beta login screen. Existing users sign in with their id/password.
-- `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: signup screen. Users either create a new room and receive an invite code, or join a partner's room with an invite code.
+- `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: signup and "find my person" screen. Users create an account, receive their own account code, then connect to a partner by entering that partner's account code.
 - `FE/ProtoWeb/src/app/components/HomeScreen.tsx`: beta home. Syncs remote files/preferences after login.
 - `FE/ProtoWeb/src/app/components/CreateSogonFile.tsx`: create a Sogon file.
 - `FE/ProtoWeb/src/app/components/MySogonFolder.tsx`: list and edit Sogon files. Syncs remote files after login.
@@ -348,18 +351,19 @@ Stack:
 Purpose:
 
 - Give each friend their own beta account.
-- Let a friend create a room/couple archive.
-- Let another friend join that room with an invite code.
+- Let each friend create their own account code.
+- Let a friend find and connect to another account by code.
 - Store Sogon files and preference DB entries by room, not by each browser.
 - Keep the backend small enough to stay free and easy to replace later.
 
 Important files:
 
 - `BE/functions/api/_shared.ts`: shared API helpers, JSON responses, id generation, password hashing, auth lookup.
+- `BE/functions/api/auth/signup.ts`: beta account signup and account-code generation.
 - `BE/functions/api/auth/login.ts`: beta account login.
 - `BE/functions/api/auth/me.ts`: current member/profile lookup.
-- `BE/functions/api/rooms/create.ts`: create a room and first owner account.
-- `BE/functions/api/rooms/join.ts`: join an existing room by invite code.
+- `BE/functions/api/people/find.ts`: find a potential partner by account code.
+- `BE/functions/api/people/connect.ts`: connect two accounts into one shared Sogon room.
 - `BE/functions/api/files/index.ts`: list and create Sogon files for the current room.
 - `BE/functions/api/files/[id].ts`: update a Sogon file in the current room.
 - `BE/functions/api/preferences/index.ts`: list and create preference DB entries for the current room.
@@ -380,8 +384,8 @@ BE/migrations/0001_beta_schema.sql
 
 Tables:
 
-- `rooms`: one couple/friend archive room. Has an `invite_code`.
-- `members`: beta login accounts. Each member belongs to one room.
+- `rooms`: one shared couple/friend archive room, created when two accounts connect.
+- `members`: beta login accounts. Each member has an `account_code`; `room_id` is empty until connected.
 - `sogon_files`: private files saved inside a room.
 - `preferences`: recommendation preference DB entries saved inside a room.
 
@@ -411,7 +415,7 @@ The native app does not yet include:
 
 - Persistent storage
 - Real authentication
-- Real invite code joining
+- Real account-code connection
 - Backend
 - Push notifications
 - Calendar storage
@@ -426,7 +430,7 @@ The project should move toward a real mobile app, but the current friend beta sh
 
 Recommended near-term direction:
 
-1. Stabilize ProtoWeb beta with D1-backed accounts and room data.
+1. Stabilize ProtoWeb beta with D1-backed accounts, account-code connection, and room data.
 2. Fix core flow gaps in ProtoWeb: selected-file unzip, opened status transition, better empty states.
 3. Use beta feedback to decide the exact native app flow.
 4. Continue native development in `FE/App/mobile`.
@@ -442,7 +446,7 @@ Current priority before returning to native foundation:
 - Finish D1 setup on Cloudflare.
 - Redeploy Pages with the `DB` binding.
 - Test account creation with one real friend.
-- Confirm two accounts can see the same room data.
+- Confirm two connected accounts can see the same room data.
 
 - Add persistent storage for profile and files.
 - Split mobile app into:
@@ -464,15 +468,14 @@ Current priority before returning to native foundation:
 - On confirmation, transition file to `opened`.
 - Show opened file in record view.
 
-### Priority 3: Relationship Room
+### Priority 3: Relationship Connection
 
-- Make invite code join flow real enough for local testing.
-- Define room model:
+- Make account-code connection real enough for local testing.
+- Define connection-backed room model:
 
 ```ts
 type SogonRoom = {
   id: string;
-  inviteCode: string;
   members: SogonProfile[];
   relationshipType: 'lover' | 'friend';
   createdAt: string;
@@ -500,7 +503,7 @@ Backend has started as a small Cloudflare Pages Functions + D1 beta backend.
 Do not expand it into a large custom server yet. Keep it focused on:
 
 - Beta account login
-- Room creation and invite-code join
+- Account-code signup and person connection
 - Room-scoped Sogon files
 - Room-scoped preference DB
 - Minimal future admin visibility for beta data
