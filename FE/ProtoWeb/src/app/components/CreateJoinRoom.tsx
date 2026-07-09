@@ -59,11 +59,15 @@ export function CreateJoinRoom() {
   if (showInvite) {
     return (
       <div className="h-full flex flex-col px-6 py-12">
-        <h1 className="text-2xl font-bold text-[color:var(--navy)] mb-12 text-center">
-          상대방을 초대해주세요
+        <h1 className="text-2xl font-bold text-[color:var(--navy)] mb-4 text-center">
+          회원가입이 완료됐어요
         </h1>
+        <p className="text-center text-sm leading-relaxed text-[color:var(--gray)]">
+          연인에게 아래 코드를 보내면<br />
+          같은 소곤방으로 연결할 수 있어요.
+        </p>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 pb-32">
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 pb-24">
           <div className="text-center">
             <p className="text-sm text-[color:var(--gray)] mb-4">초대 코드</p>
             <div className="bg-white rounded-2xl px-12 py-6 border-2 border-dashed border-[color:var(--lavender)] shadow-sm">
@@ -92,7 +96,7 @@ export function CreateJoinRoom() {
           onClick={() => navigate('/home')}
           className="bg-[color:var(--gray-light)] text-[color:var(--navy)] py-4 rounded-2xl hover:bg-[color:var(--gray-light)]/80 transition-colors"
         >
-          나중에 초대하기
+          지금은 혼자 시작하기
         </button>
       </div>
     );
@@ -100,9 +104,12 @@ export function CreateJoinRoom() {
 
   return (
     <div className="h-full flex flex-col px-6 py-12">
-      <h1 className="text-2xl font-bold text-[color:var(--navy)] mb-12 text-center">
-        {mode === 'create' ? '소곤방 만들기' : '초대코드로 들어가기'}
+      <h1 className="text-2xl font-bold text-[color:var(--navy)] mb-3 text-center">
+        회원가입
       </h1>
+      <p className="mb-8 text-center text-sm leading-relaxed text-[color:var(--gray)]">
+        계정을 만들고, 연인과 연결할 소곤방을 선택해주세요.
+      </p>
 
       <div className="flex-1 flex flex-col gap-6 pb-20">
         <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-1 ring-1 ring-[color:var(--border)]">
@@ -111,16 +118,22 @@ export function CreateJoinRoom() {
             onClick={() => setMode('create')}
             className={`rounded-xl py-3 text-sm font-bold ${mode === 'create' ? 'bg-[color:var(--lavender)] text-white' : 'text-[color:var(--gray)]'}`}
           >
-            방 만들기
+            새 방 만들기
           </button>
           <button
             type="button"
             onClick={() => setMode('join')}
             className={`rounded-xl py-3 text-sm font-bold ${mode === 'join' ? 'bg-[color:var(--lavender)] text-white' : 'text-[color:var(--gray)]'}`}
           >
-            초대코드
+            코드로 연결
           </button>
         </div>
+
+        <p className="rounded-2xl bg-white/70 px-4 py-3 text-xs leading-relaxed text-[color:var(--gray)]">
+          {mode === 'create'
+            ? '아직 연인이 가입하지 않았어도 괜찮아요. 먼저 가입하면 초대코드가 만들어져요.'
+            : '연인이 먼저 만든 초대코드를 입력하면 같은 소곤방에 연결돼요.'}
+        </p>
 
         {mode === 'join' ? (
           <div>
@@ -131,7 +144,7 @@ export function CreateJoinRoom() {
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              placeholder="예: LOVE2"
+              placeholder="연인이 보내준 코드"
               className="w-full px-4 py-4 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
             />
           </div>
@@ -139,26 +152,26 @@ export function CreateJoinRoom() {
 
         <div>
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-2">
-            닉네임을 입력해주세요
+            닉네임
           </label>
           <input
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="예: 지우"
+            placeholder="예: 재원"
             className="w-full px-4 py-4 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-2">
-            로그인 아이디
+            아이디
           </label>
           <input
             type="text"
             value={loginId}
             onChange={(e) => setLoginId(e.target.value)}
-            placeholder="예: 유재원"
+            placeholder="로그인할 때 쓸 아이디"
             className="w-full px-4 py-4 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
           />
         </div>
@@ -171,7 +184,7 @@ export function CreateJoinRoom() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="친구에게 알려줄 비밀번호"
+            placeholder="로그인할 때 쓸 비밀번호"
             className="w-full px-4 py-4 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
           />
         </div>
@@ -188,7 +201,14 @@ export function CreateJoinRoom() {
             disabled={!canSubmit || isSubmitting}
             className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? '저장 중...' : mode === 'create' ? '새 소곤방 만들기' : '소곤방 들어가기'}
+            {isSubmitting ? '가입 중...' : mode === 'create' ? '가입하고 초대코드 받기' : '가입하고 연인과 연결하기'}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="w-full bg-white text-[color:var(--navy)] py-4 rounded-2xl border-2 border-[color:var(--border)] hover:border-[color:var(--lavender)] transition-all"
+          >
+            이미 계정이 있어요
           </button>
         </div>
       </div>

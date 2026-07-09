@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { Heart, LockKeyhole, UserRound } from 'lucide-react';
-import { signInBetaUser, signInPrototypeUser } from '../lib/sogonStore';
+import { ArrowRight, Heart, LockKeyhole, UserRound } from 'lucide-react';
+import { signInBetaUser } from '../lib/sogonStore';
 
 export function LoginScreen() {
   const navigate = useNavigate();
@@ -20,14 +20,10 @@ export function LoginScreen() {
       await signInBetaUser(id, password);
       navigate('/home');
       return;
-    } catch {
-      if (signInPrototypeUser(id, password)) {
-        navigate('/home');
-        return;
-      }
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '아이디 또는 비밀번호를 다시 확인해주세요.');
     }
 
-    setError('아이디 또는 비밀번호를 다시 확인해주세요.');
     setIsSubmitting(false);
   };
 
@@ -36,7 +32,7 @@ export function LoginScreen() {
       <div className="flex items-center justify-between">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-sm font-semibold text-[color:var(--coral-deep)] shadow-sm ring-1 ring-white">
           <Heart className="h-4 w-4 fill-current" />
-          Sogon.zip prototype
+          Sogon.zip beta
         </div>
         <div className="h-11 w-11 rounded-full bg-white/80 shadow-sm ring-1 ring-white" />
       </div>
@@ -47,7 +43,7 @@ export function LoginScreen() {
           로그인하고<br />우리 기록을 열어봐요
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-[color:var(--gray)]">
-          프로토타입에서는 정해진 테스트 계정으로 바로 둘러볼 수 있어요.
+          만든 계정으로 들어가거나, 처음이라면 둘만의 소곤방을 만들어주세요.
         </p>
       </div>
 
@@ -62,7 +58,7 @@ export function LoginScreen() {
                 setId(event.target.value);
                 setError('');
               }}
-              placeholder="김진웅"
+              placeholder="예: jaewon"
               className="w-full bg-transparent text-[color:var(--navy)] outline-none placeholder:text-[color:var(--gray)]/60"
             />
           </div>
@@ -79,7 +75,7 @@ export function LoginScreen() {
                 setPassword(event.target.value);
                 setError('');
               }}
-              placeholder="1234"
+              placeholder="비밀번호"
               className="w-full bg-transparent text-[color:var(--navy)] outline-none placeholder:text-[color:var(--gray)]/60"
             />
           </div>
@@ -102,12 +98,18 @@ export function LoginScreen() {
       </form>
 
       <div className="mt-auto rounded-[2rem] bg-white/72 p-5 shadow-sm ring-1 ring-white">
-        <p className="text-xs font-bold text-[color:var(--gray)]">테스트 계정</p>
-        <p className="mt-2 text-sm text-[color:var(--navy)]">ID: 김진웅</p>
-        <p className="text-sm text-[color:var(--navy)]">비밀번호: 1234</p>
-        <p className="mt-3 text-xs leading-relaxed text-[color:var(--gray)]">
-          D1 연결 후에는 친구별 베타 계정으로 로그인할 수 있어요.
+        <p className="text-xs font-bold text-[color:var(--gray)]">처음 시작하나요?</p>
+        <p className="mt-2 text-sm leading-relaxed text-[color:var(--navy)]">
+          아이디와 비밀번호를 만들고, 연인에게 줄 초대코드를 받을 수 있어요.
         </p>
+        <button
+          type="button"
+          onClick={() => navigate('/create-room')}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[color:var(--coral-deep)] ring-1 ring-[color:var(--pink)]/60 transition-colors hover:bg-[color:var(--blush)]"
+        >
+          회원가입하고 소곤방 만들기
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

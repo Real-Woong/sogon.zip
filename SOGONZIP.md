@@ -245,8 +245,8 @@ Important files:
 
 - `FE/ProtoWeb/src/main.tsx`: React entry point.
 - `FE/ProtoWeb/src/app/App.tsx`: ProtoWeb routes.
-- `FE/ProtoWeb/src/app/components/LoginScreen.tsx`: beta login screen. It tries D1 login first, then falls back to the old prototype account.
-- `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: create a beta room or join one by invite code.
+- `FE/ProtoWeb/src/app/components/LoginScreen.tsx`: beta login screen. Existing users sign in with their id/password.
+- `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: signup screen. Users either create a new room and receive an invite code, or join a partner's room with an invite code.
 - `FE/ProtoWeb/src/app/components/HomeScreen.tsx`: beta home. Syncs remote files/preferences after login.
 - `FE/ProtoWeb/src/app/components/CreateSogonFile.tsx`: create a Sogon file.
 - `FE/ProtoWeb/src/app/components/MySogonFolder.tsx`: list and edit Sogon files. Syncs remote files after login.

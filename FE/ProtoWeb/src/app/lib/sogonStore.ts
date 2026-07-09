@@ -42,12 +42,6 @@ const tokenKey = 'sogonzip.token';
 const receivedFilesKey = 'sogonzip.receivedFiles';
 const preferencesKey = 'sogonzip.preferences';
 
-const prototypeUser = {
-  id: '김진웅',
-  password: '1234',
-  partnerNickname: '서연'
-};
-
 function canUseStorage() {
   return typeof window !== 'undefined' && Boolean(window.localStorage);
 }
@@ -127,23 +121,6 @@ export async function signInBetaUser(id: string, password: string) {
   writeJson(sessionKey, true);
   writeJson(profileKey, data.profile);
   await syncRemoteData();
-  return true;
-}
-
-export function signInPrototypeUser(id: string, password: string) {
-  if (id.trim() !== prototypeUser.id || password !== prototypeUser.password) {
-    return false;
-  }
-
-  writeJson(sessionKey, true);
-  writeJson<SogonProfile>(profileKey, {
-    nickname: prototypeUser.id,
-    relationshipType: 'lover',
-    partnerNickname: prototypeUser.partnerNickname,
-    roomCode: 'LOVE2',
-    createdAt: new Date().toISOString()
-  });
-
   return true;
 }
 
