@@ -18,8 +18,9 @@ export default function App() {
       <div className="min-h-screen w-full flex items-center justify-center bg-[linear-gradient(135deg,#fff7f7_0%,#f2ecff_45%,#e7fbf3_100%)] p-4">
         <div className="relative w-full max-w-[414px] h-[min(896px,calc(100vh-2rem))] min-h-[680px] bg-[color:var(--cream)] overflow-hidden rounded-[2.5rem] shadow-[0_30px_80px_rgba(77,61,91,0.24)] ring-1 ring-white/70">
           <Routes>
-            <Route path="/" element={<LoginScreen />} />
+            <Route path="/" element={<IntroScreen />} />
             <Route path="/intro" element={<IntroScreen />} />
+            <Route path="/login" element={<LoginScreen />} />
             <Route path="/relationship" element={<RelationshipSelection />} />
             <Route path="/create-room" element={<CreateJoinRoom />} />
             <Route path="/home" element={<HomeScreen />} />
