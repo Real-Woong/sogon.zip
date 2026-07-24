@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sogon.zip · 소곤.zip — Development Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{
+  --cream:#F6F1E4;
+  --paper:#FFFDF7;
+  --paper-2:#FBF7EC;
+  --lavender:#C9BFEA;
+  --lavender-deep:#7A6FC4;
+  --yellow:#F1CE68;
+  --pink:#EFA3B6;
+  --mint:#9BD3BC;
+  --gray-line:#E4DDC9;
+  --navy:#2A2A42;
+  --navy-soft:#65637F;
+  --navy-faint:#9391A8;
+  --code-bg:#242236;
+  --code-text:#E9E6F5;
+  --radius-lg:22px;
+  --radius-md:14px;
+  --radius-sm:8px;
+  --sidebar-w:308px;
+  --font-display:'Space Grotesk','Pretendard',sans-serif;
+  --font-body:'Pretendard','Space Grotesk',sans-serif;
+  --font-mono:'Space Mono','Pretendard',monospace;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--cream);
+  color:var(--navy);
+  font-family:var(--font-body);
+  font-size:15.5px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* subtle grid/dot texture on cream background, like graph paper of a file explorer */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background-image: radial-gradient(circle, rgba(42,42,66,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  pointer-events:none;
+  z-index:0;
+}
+
+a{color:inherit;text-decoration:none;}
+ul{list-style:none;margin:0;padding:0;}
+
+/* ===== Layout ===== */
+.app{
+  display:flex;
+  min-height:100vh;
+  position:relative;
+  z-index:1;
+}
+
+/* ===== Sidebar : file-explorer tree ===== */
+.sidebar{
+  width:var(--sidebar-w);
+  flex-shrink:0;
+  background:var(--paper);
+  border-right:2px solid var(--navy);
+  position:sticky;
+  top:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  z-index:40;
+}
+.sidebar-head{
+  padding:22px 20px 16px;
+  border-bottom:2px dashed var(--gray-line);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.brand-mark{
+  width:38px;height:38px;
+  border-radius:9px;
+  background:linear-gradient(145deg,var(--lavender),var(--pink));
+  border:2px solid var(--navy);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:15px;
+  color:var(--navy);
+  box-shadow:2px 2px 0 var(--navy);
+  flex-shrink:0;
+}
+.brand-text{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:16.5px;
+  letter-spacing:-0.01em;
+}
+.brand-sub{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--navy-soft);
+  letter-spacing:0.06em;
+  margin-top:2px;
+  text-transform:uppercase;
+}
+.sidebar-search{
+  margin-top:14px;
+  position:relative;
+}
+.sidebar-search input{
+  width:100%;
+  border:1.5px solid var(--gray-line);
+  background:var(--paper-2);
+  border-radius:var(--radius-sm);
+  padding:8px 10px 8px 30px;
+  font-family:var(--font-body);
+  font-size:12.5px;
+  color:var(--navy);
+  outline:none;
+}
+.sidebar-search input:focus{border-color:var(--lavender-deep);}
+.sidebar-search::before{
+  content:"⌕";
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  color:var(--navy-faint);
+  font-size:13px;
+}
+.sidebar-nav{
+  flex:1;
+  overflow-y:auto;
+  padding:10px 12px 30px;
+}
+.sidebar-nav::-webkit-scrollbar{width:6px;}
+.sidebar-nav::-webkit-scrollbar-thumb{background:var(--gray-line);border-radius:4px;}
+
+.nav-chapter{margin-bottom:2px;}
+.nav-link{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:var(--radius-sm);
+  font-size:12.8px;
+  color:var(--navy-soft);
+  transition:background .15s ease,color .15s ease;
+}
+.nav-link:hover{background:var(--paper-2);color:var(--navy);}
+.nav-link.active{
+  background:var(--navy);
+  color:var(--paper);
+}
+.nav-link.active .nav-num{color:var(--yellow);}
+.nav-num{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--lavender-deep);
+  flex-shrink:0;
+  min-width:22px;
+}
+.nav-label{font-weight:500;}
+.nav-sub{margin:0 0 4px 14px;border-left:1.5px dashed var(--gray-line);padding-left:8px;}
+.nav-link-sub{font-size:12px;padding:5px 8px;}
+.nav-link-sub .nav-num{min-width:30px;font-size:10px;}
+
+.sidebar-foot{
+  padding:12px 20px 18px;
+  border-top:2px dashed var(--gray-line);
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--navy-faint);
+  display:flex;
+  justify-content:space-between;
+}
+
+.sidebar-toggle{
+  display:none;
+  position:fixed;
+  top:16px;left:16px;
+  z-index:50;
+  width:42px;height:42px;
+  border-radius:10px;
+  background:var(--navy);
+  color:var(--paper);
+  border:none;
+  font-size:18px;
+  align-items:center;justify-content:center;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.2);
+}
+
+/* ===== Main ===== */
+.main{
+  flex:1;
+  min-width:0;
+  padding:38px 48px 120px;
+  max-width:900px;
+}
+
+.hero{
+  margin-bottom:34px;
+}
+.hero-window{
+  border:2px solid var(--navy);
+  border-radius:var(--radius-lg);
+  background:var(--paper);
+  box-shadow:6px 6px 0 var(--navy);
+  overflow:hidden;
+}
+.hero-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:11px 16px;
+  border-bottom:2px solid var(--navy);
+  background:repeating-linear-gradient(135deg,var(--paper-2),var(--paper-2) 8px,var(--paper) 8px,var(--paper) 16px);
+}
+.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--navy);}
+.dot.d1{background:var(--pink);}
+.dot.d2{background:var(--yellow);}
+.dot.d3{background:var(--mint);}
+.hero-path{
+  margin-left:8px;
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--navy-soft);
+}
+.hero-inner{
+  padding:36px 34px 32px;
+}
+.hero-eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--lavender-deep);
+  background:rgba(201,191,234,0.25);
+  border:1px solid var(--lavender);
+  padding:4px 10px;
+  border-radius:20px;
+  margin-bottom:16px;
+}
+.hero h1{
+  font-family:var(--font-display);
+  font-size:clamp(28px,4vw,42px);
+  font-weight:700;
+  margin:0 0 14px;
+  letter-spacing:-0.02em;
+  line-height:1.25;
+}
+.hero h1 .zip{color:var(--lavender-deep);}
+.hero p{
+  font-size:15px;
+  color:var(--navy-soft);
+  max-width:56ch;
+  margin:0 0 22px;
+}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;}
+.hero-tag{
+  font-family:var(--font-mono);
+  font-size:11px;
+  padding:5px 10px;
+  border-radius:20px;
+  border:1.5px solid var(--navy);
+  background:var(--paper-2);
+}
+.hero-tag.t1{background:var(--pink);}
+.hero-tag.t2{background:var(--mint);}
+.hero-tag.t3{background:var(--yellow);}
+
+/* ===== Chapters ===== */
+.chapter{
+  scroll-margin-top:24px;
+  margin-bottom:14px;
+}
+.chapter-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:18px 0 14px;
+  border-bottom:2.5px solid var(--navy);
+  margin-bottom:20px;
+}
+.chapter-num{
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:13px;
+  background:var(--navy);
+  color:var(--yellow);
+  min-width:34px;
+  height:34px;
+  border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.chapter-title{
+  font-family:var(--font-display);
+  font-size:23px;
+  font-weight:700;
+  margin:0;
+  flex:1;
+  letter-spacing:-0.01em;
+}
+.chapter-tag{
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  color:var(--navy-faint);
+  letter-spacing:0.08em;
+  border:1px dashed var(--gray-line);
+  padding:3px 8px;
+  border-radius:20px;
+  white-space:nowrap;
+}
+
+.chapter-body{
+  padding-left:2px;
+}
+.chapter-body p{
+  margin:0 0 14px;
+  color:var(--navy);
+}
+.chapter-body ul, .chapter-body ol{
+  margin:0 0 16px;
+  padding-left:22px;
+}
+.chapter-body li{margin-bottom:5px;}
+.chapter-body strong{
+  background:linear-gradient(180deg,transparent 62%,var(--yellow) 62%);
+  font-weight:700;
+  padding:0 1px;
+}
+
+.subsection{
+  margin:26px 0 30px;
+  padding:22px 24px;
+  background:var(--paper);
+  border:1.5px solid var(--gray-line);
+  border-radius:var(--radius-md);
+  scroll-margin-top:24px;
+  position:relative;
+}
+.subsection::before{
+  content:"📁";
+  position:absolute;
+  top:-13px;left:20px;
+  background:var(--cream);
+  padding:0 8px;
+  font-size:13px;
+}
+.subsection-title{
+  font-family:var(--font-display);
+  font-size:16.5px;
+  font-weight:600;
+  margin:4px 0 14px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.sub-num{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--lavender-deep);
+  background:rgba(201,191,234,0.3);
+  padding:2px 7px;
+  border-radius:6px;
+}
+
+h3.subhead{
+  font-family:var(--font-display);
+  font-size:16px;
+  font-weight:600;
+  margin:26px 0 10px;
+  padding-left:12px;
+  border-left:4px solid var(--pink);
+}
+h4{
+  font-family:var(--font-display);
+  font-size:14.5px;
+  font-weight:600;
+  margin:20px 0 8px;
+  color:var(--navy);
+}
+
+/* ===== code cards ===== */
+.codecard{
+  margin:14px 0 20px;
+  border-radius:var(--radius-md);
+  overflow:hidden;
+  border:1.5px solid var(--navy);
+}
+.codecard.lang-txt{
+  background:var(--paper-2);
+}
+.codecard-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 12px;
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  border-bottom:1.5px solid var(--navy);
+}
+.codecard.lang-txt .codecard-bar{
+  background:var(--mint);
+  color:var(--navy);
+}
+.codecard.lang-ts .codecard-bar{
+  background:var(--lavender);
+  color:var(--navy);
+}
+.codecard-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--navy);
+  opacity:0.55;
+}
+.codecard-label{flex:1;letter-spacing:0.03em;}
+.copy-btn{
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  border:1px solid var(--navy);
+  background:var(--paper);
+  color:var(--navy);
+  border-radius:5px;
+  padding:2px 8px;
+  cursor:pointer;
+}
+.copy-btn:hover{background:var(--yellow);}
+.codecard-pre{
+  margin:0;
+  padding:14px 16px;
+  overflow-x:auto;
+}
+.codecard.lang-txt .codecard-pre{
+  background:var(--paper-2);
+}
+.codecard.lang-ts .codecard-pre{
+  background:var(--code-bg);
+}
+.codecard-pre code{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  line-height:1.65;
+  white-space:pre;
+}
+.codecard.lang-txt .codecard-pre code{color:#3B3A55;}
+.codecard.lang-ts .codecard-pre code{color:var(--code-text);}
+
+/* table */
+.table-wrap{overflow-x:auto;margin:14px 0 20px;}
+table.datatable{
+  border-collapse:collapse;
+  width:100%;
+  font-size:13.5px;
+  border:1.5px solid var(--navy);
+  border-radius:var(--radius-sm);
+  overflow:hidden;
+}
+table.datatable th{
+  background:var(--navy);
+  color:var(--paper);
+  text-align:left;
+  padding:8px 12px;
+  font-family:var(--font-mono);
+  font-size:11.5px;
+}
+table.datatable td{
+  padding:8px 12px;
+  border-top:1px solid var(--gray-line);
+}
+table.datatable tr:nth-child(even) td{background:var(--paper-2);}
+
+/* back to top */
+.top-btn{
+  position:fixed;
+  right:26px;bottom:26px;
+  width:44px;height:44px;
+  border-radius:12px;
+  background:var(--navy);
+  color:var(--yellow);
+  border:none;
+  font-size:17px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.25);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+  z-index:45;
+}
+.top-btn.show{opacity:1;pointer-events:auto;}
+.top-btn:hover{transform:translateY(-2px);}
+
+/* footer note */
+.doc-footer{
+  margin-top:50px;
+  padding-top:20px;
+  border-top:2px dashed var(--gray-line);
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--navy-faint);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+/* scrollbar overlay */
+.sidebar-backdrop{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(20,18,35,0.35);
+  z-index:35;
+}
+
+@media (max-width:920px){
+  .sidebar{
+    position:fixed;
+    left:0;top:0;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    width:82vw;
+    max-width:320px;
+  }
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-toggle{display:flex;}
+  .sidebar-backdrop.show{display:block;}
+  .main{padding:80px 20px 100px;}
+  .hero-inner{padding:26px 20px;}
+  .subsection{padding:18px 16px;}
+}
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="메뉴 열기">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-mark">.zip</div>
+        <div>
+          <div class="brand-text">소곤.zip</div>
+          <div class="brand-sub">Development Archive</div>
+        </div>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" id="navSearch" placeholder="문서 안에서 찾기...">
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <ul>
+<li class="nav-chapter"><a href="#sec-0" class="nav-link" data-id="sec-0"><span class="nav-num">0</span><span class="nav-label">앱 이름</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-1" class="nav-link" data-id="sec-1"><span class="nav-num">1</span><span class="nav-label">이름의 의미</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-2_1" class="nav-link" data-id="sec-2_1"><span class="nav-num">2</span><span class="nav-label">핵심 컨셉</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-3" class="nav-link" data-id="sec-3"><span class="nav-num">3</span><span class="nav-label">서비스 한 줄 정의</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-4" class="nav-link" data-id="sec-4"><span class="nav-num">4</span><span class="nav-label">메인 카피 후보</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-5" class="nav-link" data-id="sec-5"><span class="nav-num">5</span><span class="nav-label">핵심 타겟</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-6" class="nav-link" data-id="sec-6"><span class="nav-num">6</span><span class="nav-label">주요 사용 시나리오</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-7" class="nav-link" data-id="sec-7"><span class="nav-num">7</span><span class="nav-label">UI 메타포</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-8" class="nav-link" data-id="sec-8"><span class="nav-num">8</span><span class="nav-label">핵심 UI 오브젝트</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-9" class="nav-link" data-id="sec-9"><span class="nav-num">9</span><span class="nav-label">주요 기능명</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-10" class="nav-link" data-id="sec-10"><span class="nav-num">10</span><span class="nav-label">앱 구조</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-11" class="nav-link" data-id="sec-11"><span class="nav-num">11</span><span class="nav-label">핵심 UX 원칙</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-12" class="nav-link" data-id="sec-12"><span class="nav-num">12</span><span class="nav-label">주요 화면 구성</span></a>
+<ul class="nav-sub">
+<li><a href="#sec-12-1" class="nav-link nav-link-sub" data-id="sec-12-1"><span class="nav-num">12.1</span><span class="nav-label">Intro</span></a></li>
+<li><a href="#sec-12-2" class="nav-link nav-link-sub" data-id="sec-12-2"><span class="nav-num">12.2</span><span class="nav-label">Relationship Select</span></a></li>
+<li><a href="#sec-12-3" class="nav-link nav-link-sub" data-id="sec-12-3"><span class="nav-num">12.3</span><span class="nav-label">Sogon Room Connect</span></a></li>
+<li><a href="#sec-12-4" class="nav-link nav-link-sub" data-id="sec-12-4"><span class="nav-num">12.4</span><span class="nav-label">Home</span></a></li>
+<li><a href="#sec-12-5" class="nav-link nav-link-sub" data-id="sec-12-5"><span class="nav-num">12.5</span><span class="nav-label">Create Sogon File</span></a></li>
+<li><a href="#sec-12-6" class="nav-link nav-link-sub" data-id="sec-12-6"><span class="nav-num">12.6</span><span class="nav-label">My Sogon Folder</span></a></li>
+<li><a href="#sec-12-7" class="nav-link nav-link-sub" data-id="sec-12-7"><span class="nav-num">12.7</span><span class="nav-label">Unzip Confirmation</span></a></li>
+<li><a href="#sec-12-8" class="nav-link nav-link-sub" data-id="sec-12-8"><span class="nav-num">12.8</span><span class="nav-label">Partner Received</span></a></li>
+<li><a href="#sec-12-9" class="nav-link nav-link-sub" data-id="sec-12-9"><span class="nav-num">12.9</span><span class="nav-label">Recommendation</span></a></li>
+<li><a href="#sec-12-10" class="nav-link nav-link-sub" data-id="sec-12-10"><span class="nav-num">12.10</span><span class="nav-label">Record.zip / Calendar</span></a></li>
+</ul>
+</li>
+<li class="nav-chapter"><a href="#sec-13" class="nav-link" data-id="sec-13"><span class="nav-num">13</span><span class="nav-label">디자인 시스템</span></a>
+<ul class="nav-sub">
+<li><a href="#sec-13-1" class="nav-link nav-link-sub" data-id="sec-13-1"><span class="nav-num">13.1</span><span class="nav-label">전체 무드</span></a></li>
+<li><a href="#sec-13-2" class="nav-link nav-link-sub" data-id="sec-13-2"><span class="nav-num">13.2</span><span class="nav-label">시각 스타일</span></a></li>
+<li><a href="#sec-13-3" class="nav-link nav-link-sub" data-id="sec-13-3"><span class="nav-num">13.3</span><span class="nav-label">UI 컴포넌트</span></a></li>
+</ul>
+</li>
+<li class="nav-chapter"><a href="#sec-14" class="nav-link" data-id="sec-14"><span class="nav-num">14</span><span class="nav-label">데이터 모델 초안</span></a>
+<ul class="nav-sub">
+<li><a href="#sec-14-1" class="nav-link nav-link-sub" data-id="sec-14-1"><span class="nav-num">14.1</span><span class="nav-label">User</span></a></li>
+<li><a href="#sec-14-2" class="nav-link nav-link-sub" data-id="sec-14-2"><span class="nav-num">14.2</span><span class="nav-label">SogonRoom</span></a></li>
+<li><a href="#sec-14-3" class="nav-link nav-link-sub" data-id="sec-14-3"><span class="nav-num">14.3</span><span class="nav-label">RoomMember</span></a></li>
+<li><a href="#sec-14-4" class="nav-link nav-link-sub" data-id="sec-14-4"><span class="nav-num">14.4</span><span class="nav-label">SogonFile</span></a></li>
+<li><a href="#sec-14-5" class="nav-link nav-link-sub" data-id="sec-14-5"><span class="nav-num">14.5</span><span class="nav-label">SogonFileCategory</span></a></li>
+<li><a href="#sec-14-6" class="nav-link nav-link-sub" data-id="sec-14-6"><span class="nav-num">14.6</span><span class="nav-label">OpenPolicy</span></a></li>
+<li><a href="#sec-14-7" class="nav-link nav-link-sub" data-id="sec-14-7"><span class="nav-num">14.7</span><span class="nav-label">SogonFileStatus</span></a></li>
+<li><a href="#sec-14-8" class="nav-link nav-link-sub" data-id="sec-14-8"><span class="nav-num">14.8</span><span class="nav-label">UnzipEvent</span></a></li>
+<li><a href="#sec-14-9" class="nav-link nav-link-sub" data-id="sec-14-9"><span class="nav-num">14.9</span><span class="nav-label">Reaction</span></a></li>
+</ul>
+</li>
+<li class="nav-chapter"><a href="#sec-15" class="nav-link" data-id="sec-15"><span class="nav-num">15</span><span class="nav-label">추천 로직 초기 방향</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-16" class="nav-link" data-id="sec-16"><span class="nav-num">16</span><span class="nav-label">보안 원칙</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-17" class="nav-link" data-id="sec-17"><span class="nav-num">17</span><span class="nav-label">BM 구조</span></a>
+<ul class="nav-sub">
+<li><a href="#sec-17-1" class="nav-link nav-link-sub" data-id="sec-17-1"><span class="nav-num">17.1</span><span class="nav-label">Free Plan</span></a></li>
+<li><a href="#sec-17-2" class="nav-link nav-link-sub" data-id="sec-17-2"><span class="nav-num">17.2</span><span class="nav-label">Plus Plan</span></a></li>
+<li><a href="#sec-17-3" class="nav-link nav-link-sub" data-id="sec-17-3"><span class="nav-num">17.3</span><span class="nav-label">Premium Plan</span></a></li>
+<li><a href="#sec-17-4" class="nav-link nav-link-sub" data-id="sec-17-4"><span class="nav-num">17.4</span><span class="nav-label">일회성 결제</span></a></li>
+</ul>
+</li>
+<li class="nav-chapter"><a href="#sec-18" class="nav-link" data-id="sec-18"><span class="nav-num">18</span><span class="nav-label">MVP 우선순위</span></a>
+<ul class="nav-sub">
+<li><a href="#sec-18-1" class="nav-link nav-link-sub" data-id="sec-18-1"><span class="nav-num">18.1</span><span class="nav-label">반드시 필요한 기능</span></a></li>
+<li><a href="#sec-18-2" class="nav-link nav-link-sub" data-id="sec-18-2"><span class="nav-num">18.2</span><span class="nav-label">후순위 기능</span></a></li>
+</ul>
+</li>
+<li class="nav-chapter"><a href="#sec-19" class="nav-link" data-id="sec-19"><span class="nav-num">19</span><span class="nav-label">Figma 디자인 방향</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-20" class="nav-link" data-id="sec-20"><span class="nav-num">20</span><span class="nav-label">Figma 프롬프트용 요약</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-21" class="nav-link" data-id="sec-21"><span class="nav-num">21</span><span class="nav-label">현재 최종 결론</span></a>
+</li>
+<li class="nav-chapter"><a href="#sec-22" class="nav-link" data-id="sec-22"><span class="nav-num">22</span><span class="nav-label">데이트 추천 시스템 기술 아카이브</span></a>
+</li>
+      </ul>
+    </nav>
+    <div class="sidebar-foot">
+      <span>v1.0 archive</span>
+      <span>23 chapters</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <div class="hero-window">
+        <div class="hero-bar">
+          <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+          <span class="hero-path">~/sogon.zip/archive.md</span>
+        </div>
+        <div class="hero-inner">
+          <span class="hero-eyebrow">📁 Relationship Preference Archive App</span>
+          <h1>소곤<span class="zip">.zip</span> — 개발 아카이브</h1>
+          <p>조용히 저장한 취향이, 함께할 시간을 추천해주는 앱. 이름의 의미부터 UI 메타포, 데이터 모델, 추천 알고리즘, BM 구조까지 — 프로젝트의 모든 결정 사항을 하나의 파일 탐색기 안에 압축해두었습니다.</p>
+          <div class="hero-tags">
+            <span class="hero-tag t1">Couple · Friend</span>
+            <span class="hero-tag t2">Cascade Recommendation</span>
+            <span class="hero-tag t3">Constraint Relaxation</span>
+            <span class="hero-tag">MVP Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<section class="chapter" id="sec-0">
+<header class="chapter-head"><span class="chapter-num">0</span><h2 class="chapter-title">앱 이름</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="section">공식 앱명</h3>
+<p><strong>Sogon.zip</strong></p>
+<h3 class="subhead" id="section_1">한글명</h3>
+<p><strong>소곤.zip</strong></p>
+<h3 class="subhead" id="section_2">읽는 법</h3>
+<p><strong>소곤집</strong></p></div>
+</section>
+<section class="chapter" id="sec-1">
+<header class="chapter-head"><span class="chapter-num">1</span><h2 class="chapter-title">이름의 의미</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p><strong>Sogon.zip / 소곤.zip</strong>은 두 가지 의미를 가진다.</p>
+<h3 class="subhead" id="sec-1_1">1. 소곤소곤 나눈 이야기들을 압축한 파일</h3>
+<p>연인이나 친구와 나누고 싶은 취향, 비밀, 마음, 선호를 조용히 저장해두는 공간이다.</p>
+<p><code>.zip</code>은 다음 의미를 가진다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">취향을 압축한다
+마음을 저장한다
+아직 열리지 않은 이야기를 보관한다
+필요한 순간에 압축을 푼다
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-2">2. 우리만의 소곤거리는 집</h3>
+<p><code>zip</code>은 “집”처럼 읽힐 수도 있다.</p>
+<p>즉, <strong>소곤.zip = 소곤집</strong>이다.</p>
+<p>이 앱은 가까운 사람과의 취향과 마음을 담아두는 작은 디지털 집이다.</p></div>
+</section>
+<section class="chapter" id="sec-2_1">
+<header class="chapter-head"><span class="chapter-num">2</span><h2 class="chapter-title">핵심 컨셉</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p><strong>Sogon.zip은 가까운 사람과 나누고 싶은 취향과 마음을 파일처럼 저장하고, 그 정보는 약속/데이트 추천에 반영되며, 정해진 날 작성자 확인 후 상대에게 열리는 관계 기반 취향 아카이브 앱이다.</strong></p>
+<p>핵심은 다음 3가지다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1. 취향을 조용히 저장한다.
+2. 저장된 취향을 바탕으로 데이트/약속을 추천한다.
+3. 특정 시점에 파일을 열어 상대에게 보여준다.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-3">
+<header class="chapter-head"><span class="chapter-num">3</span><h2 class="chapter-title">서비스 한 줄 정의</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">조용히 저장한 취향이, 함께할 시간을 추천해주는 곳.
+</code></pre>
+</div>
+<p>또는:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">우리만의 취향과 마음을 압축해두고, 필요한 순간에 열어보는 앱.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-4">
+<header class="chapter-head"><span class="chapter-num">4</span><h2 class="chapter-title">메인 카피 후보</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="section_3">감성형</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+조용히 저장한 취향이,
+우리의 시간이 되는 곳.
+</code></pre>
+</div>
+<h3 class="subhead" id="section_4">기능형</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+취향은 추천으로 풀리고,
+마음은 정해둔 날에 열려요.
+</code></pre>
+</div>
+<h3 class="subhead" id="section_5">브랜드형</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+우리만 아는 취향과 마음을 담아두는 집.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-1020">1020 감성형</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+우리 취향 모음.zip
+</code></pre>
+</div>
+<h3 class="subhead" id="section_6">추천 최종 조합</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+
+조용히 저장한 취향이,
+우리의 시간이 되는 곳.
+
+취향은 추천으로 풀리고,
+마음은 정해둔 날에 열려요.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-5">
+<header class="chapter-head"><span class="chapter-num">5</span><h2 class="chapter-title">핵심 타겟</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-1_2">1차 타겟</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">20대 여성 유저
+연인과 데이트 코스를 자주 고민하는 사용자
+친구와 맛집/카페/여행 취향을 공유하는 사용자
+감성 기록, 취향 아카이브, 기념일 기록을 좋아하는 사용자
+</code></pre>
+</div>
+<h3 class="subhead" id="section_7">확장 타겟</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">연인
+절친
+친구 1:1
+소규모 친구 그룹
+여행 메이트
+룸메이트
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-6">
+<header class="chapter-head"><span class="chapter-num">6</span><h2 class="chapter-title">주요 사용 시나리오</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-6-1">6.1 연인 모드</h3>
+<p>사용자는 연인과 연결한다.</p>
+<p>사용자는 자신의 취향을 파일처럼 저장한다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">파일명: 매운음식_싫어함.zip
+태그: 음식
+내용: 사실 나는 매운 음식을 잘 못 먹어.
+민감도: 2
+공개 시점: 100일
+추천 반영: ON
+</code></pre>
+</div>
+<p>앱은 이 정보를 상대에게 직접 보여주지 않지만, 데이트 추천에는 반영한다.</p>
+<p>D+100이 되면 작성자에게 먼저 알림이 간다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘 열릴 소곤파일이 있어요.
+상대에게 보여주기 전에 확인해주세요.
+</code></pre>
+</div>
+<p>작성자가 확인하면 상대에게 열린다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">새로운 소곤파일이 열렸어요.
+
+“사실 나는 매운 음식을 잘 못 먹어.”
+</code></pre>
+</div>
+<p>이 순간은 캘린더에 기록된다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">D+100
+우리가 하나 더 가까워진 날
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-6-2">6.2 친구 모드</h3>
+<p>사용자는 친구와 연결한다.</p>
+<p>친구끼리 취향을 저장한다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">파일명: 카페취향.zip
+태그: 카페
+내용: 나는 사람 많은 핫플보다 조용한 디저트 카페가 좋아.
+민감도: 2
+공개 시점: 다음 약속 전
+추천 반영: ON
+</code></pre>
+</div>
+<p>앱은 다음 약속 추천에 이 정보를 반영한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘의 약속 추천.zip
+
+1. 조용한 디저트 카페
+2. 소품샵
+3. 포토부스
+
+서로의 취향을 조심스럽게 풀어봤어요.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-7">
+<header class="chapter-head"><span class="chapter-num">7</span><h2 class="chapter-title">UI 메타포</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>Sogon.zip의 UI는 <strong>컴퓨터 폴더 / zip 파일 / 압축 해제 / 파일 탐색기 / 집</strong> 메타포를 기반으로 한다.</p>
+<h3 class="subhead" id="section_8">핵심 시각 언어</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">폴더
+파일
+.zip
+압축
+압축 해제
+잠긴 파일
+파일 미리보기
+기록 스탬프
+우리만의 디지털 집
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-8">
+<header class="chapter-head"><span class="chapter-num">8</span><h2 class="chapter-title">핵심 UI 오브젝트</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-8-1">8.1 소곤파일</h3>
+<p>기존의 Open Card를 대체하는 핵심 단위.</p>
+<p>사용자가 저장하는 모든 취향/비밀/마음은 <strong>소곤파일</strong>이다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤파일
+- 음식.zip
+- 카페취향.zip
+- 생일선물취향.zip
+- 말하기어려운마음.zip
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-8-2">8.2 소곤폴더</h3>
+<p>파일들이 모여 있는 공간.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">내 소곤폴더
+우리 소곤폴더
+친구와의 소곤폴더
+연인과의 소곤폴더
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-8-3">8.3 압축 풀기</h3>
+<p>카드가 상대에게 공개되는 행위.</p>
+<p>기존의 “Open”을 앱 세계관에서는 <strong>압축 풀기</strong> 또는 <strong>열기</strong>로 표현한다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘 이 파일을 열까요?
+압축을 풀면 상대가 내용을 볼 수 있어요.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-8-4">8.4 추천.zip</h3>
+<p>데이트/약속 추천 결과.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘의 추천.zip
+두 사람의 취향을 조심스럽게 풀어봤어요.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-8-5">8.5 기록.zip</h3>
+<p>열린 파일과 반응, 기념일이 저장되는 공간.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">우리기록.zip
+D+100에 열린 음식취향.zip
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-9">
+<header class="chapter-head"><span class="chapter-num">9</span><h2 class="chapter-title">주요 기능명</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>기존 기능명을 Sogon.zip 세계관에 맞게 바꾼다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Open Card → 소곤파일
+Card List → 내 소곤폴더
+Create Card → 새 소곤파일 만들기
+Open Confirmation → 압축 풀기 확인
+Partner Received → 새 소곤파일 도착
+Date Recommendation → 오늘의 추천.zip
+Calendar → 기록.zip / 소곤 캘린더
+Reaction → 답장 / 반응 남기기
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-10">
+<header class="chapter-head"><span class="chapter-num">10</span><h2 class="chapter-title">앱 구조</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-10-1">10.1 온보딩</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Sogon.zip에 오신 걸 환영해요.
+
+조용히 저장한 취향이,
+우리의 시간이 되는 곳.
+</code></pre>
+</div>
+<p>사용자 선택:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">누구와 소곤.zip을 시작할까요?
+
+[연인과 시작하기]
+데이트와 기념일을 더 편하게 기록해요.
+
+[친구와 시작하기]
+약속, 여행, 취향을 더 쉽게 맞춰요.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-10-2">10.2 관계방 생성</h3>
+<p>기존 커플방 개념을 확장해 <strong>소곤방</strong>으로 부른다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">새 소곤방 만들기
+초대코드로 들어가기
+</code></pre>
+</div>
+<p>데이터 모델상으로는 <code>SogonRoom</code>.</p>
+<p>방 타입:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">couple
+friend
+group_friend
+</code></pre>
+</div>
+<p>MVP에서는 다음 두 개만 지원한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">couple
+friend
+</code></pre>
+</div>
+<p>그리고 friend도 처음에는 1:1로 제한한다.</p></div>
+</section>
+<section class="chapter" id="sec-11">
+<header class="chapter-head"><span class="chapter-num">11</span><h2 class="chapter-title">핵심 UX 원칙</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-11-1">11.1 공개와 추천 반영은 분리한다</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">파일 공개 여부 = 상대가 파일 내용을 볼 수 있는가?
+추천 반영 여부 = 앱이 추천 알고리즘에 사용할 수 있는가?
+</code></pre>
+</div>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">isOpened: false
+recommendationEnabled: true
+</code></pre>
+</div>
+<p>뜻:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">상대에게 아직 파일은 열리지 않았지만, 추천에는 사용된다.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-11-2">11.2 추천에는 반영하되, 이유는 숨긴다</h3>
+<p>나쁜 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">상대가 매운 음식을 싫어해서 마라탕은 제외했어요.
+</code></pre>
+</div>
+<p>좋은 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">두 분이 부담 없이 즐길 수 있는 코스를 골라봤어요.
+</code></pre>
+</div>
+<p>또는:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">서로의 취향을 조심스럽게 풀어봤어요.
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-11-3">11.3 자동 공개는 없다</h3>
+<p>공개 예정일은 자동 공개일이 아니라 <strong>압축 풀기 확인일</strong>이다.</p>
+<p>전날 알림:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">내일 열릴 소곤파일이 있어요.
+상대에게 보여주기 전에 확인해주세요.
+</code></pre>
+</div>
+<p>당일 알림:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘 이 소곤파일을 열 예정이에요.
+
+“사실 나는 매운 음식을 잘 못 먹어.”
+
+[오늘 열기]
+[수정하고 열기]
+[다음 기념일로 미루기]
+[아직 닫아두기]
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-11-4">11.4 열린 순간은 기록된다</h3>
+<p>파일이 열리면 상대방은 반응을 남길 수 있고, 그 순간은 캘린더에 기록된다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">D+100
+우리가 하나 더 가까워진 날
+
+음식취향.zip이 열렸어요.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-12">
+<header class="chapter-head"><span class="chapter-num">12</span><h2 class="chapter-title">주요 화면 구성</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="subsection" id="sec-12-1">
+<h3 class="subsection-title"><span class="sub-num">12.1</span>Intro</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">소곤.zip
+
+조용히 저장한 취향이,
+우리의 시간이 되는 곳.
+
+[시작하기]
+</code></pre>
+</div>
+<p>Visual:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">레트로한 작은 폴더 아이콘
+.zip 파일 아이콘
+부드러운 크림 배경
+말풍선처럼 작게 떠 있는 파일들
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-2">
+<h3 class="subsection-title"><span class="sub-num">12.2</span>Relationship Select</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">누구와 소곤.zip을 시작할까요?
+
+[연인과 시작하기]
+데이트와 기념일을 더 편하게 기록해요.
+
+[친구와 시작하기]
+약속, 여행, 취향을 더 쉽게 맞춰요.
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-3">
+<h3 class="subsection-title"><span class="sub-num">12.3</span>Sogon Room Connect</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">닉네임을 입력해주세요
+
+[닉네임 입력]
+
+[새 소곤방 만들기]
+[초대코드로 들어가기]
+</code></pre>
+</div>
+<p>초대 화면:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">상대방을 초대해주세요
+
+초대코드
+A7K92
+
+[코드 복사하기]
+[공유하기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-4">
+<h3 class="subsection-title"><span class="sub-num">12.4</span>Home</h3>
+<div class="chapter-body"><p>연인 모드:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">D+87
+우리의 소곤.zip
+
+오늘의 추천.zip
+두 사람의 취향을 조심스럽게 풀어봤어요.
+[추천 열기]
+
+다가오는 소곤파일
+D+100에 열릴 파일 2개
+[확인하기]
+
+최근 기록.zip
+음식취향.zip이 열렸어요.
+[기록 보기]
+</code></pre>
+</div>
+<p>친구 모드:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">우리의 소곤.zip
+
+오늘의 약속 추천.zip
+친구와의 취향을 조심스럽게 풀어봤어요.
+[추천 열기]
+
+다가오는 소곤파일
+다음 약속 전에 열릴 파일 1개
+[확인하기]
+
+최근 기록.zip
+카페취향.zip이 열렸어요.
+[기록 보기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-5">
+<h3 class="subsection-title"><span class="sub-num">12.5</span>Create Sogon File</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">새 소곤파일 만들기
+
+언젠가 알려주고 싶은 취향이나 마음을
+조용히 저장해보세요.
+</code></pre>
+</div>
+<p>입력 항목:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">파일 태그
+[음식] [알레르기] [카페] [데이트 취향] [취미] [비밀] [+ 직접 추가]
+
+파일 내용
+[사실 나는 매운 음식을 잘 못 먹어.]
+
+민감도
+😄 😀 🙂 🙁 😣
+
+열리는 시점
+[지금 알려도 좋아요]
+[100일 후]
+[200일 후]
+[1년 후]
+[직접 날짜 선택]
+[내가 직접 열게요]
+[열고 싶지 않아요]
+
+추천에 반영하기
+[ON]
+
+[소곤파일 저장하기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-6">
+<h3 class="subsection-title"><span class="sub-num">12.6</span>My Sogon Folder</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">내 소곤폴더
+
+[열릴 예정] [열 준비됨] [열림] [닫아둠]
+</code></pre>
+</div>
+<p>파일 카드 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">음식취향.zip
+🔒 아직 닫혀 있어요
+D+100 열림 예정
+민감도 😀
+추천 반영 ON
+
+[수정]
+[시점 변경]
+</code></pre>
+</div>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">카페취향.zip
+🎁 열림 완료
+D+50에 열렸어요
+반응 1개
+
+[기록 보기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-7">
+<h3 class="subsection-title"><span class="sub-num">12.7</span>Unzip Confirmation</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘 열릴 소곤파일이 있어요
+
+상대에게 보여주기 전에
+마지막으로 확인해주세요.
+</code></pre>
+</div>
+<p>파일 미리보기:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">음식취향.zip
+
+“사실 나는 매운 음식을 잘 못 먹어.”
+
+함께 보낼 메시지:
+[우리 벌써 100일 만났네. 사랑해.]
+</code></pre>
+</div>
+<p>버튼:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">[오늘 열기]
+[수정하고 열기]
+[다음 기념일로 미루기]
+[아직 닫아두기]
+</code></pre>
+</div>
+<p>주의 문구:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">열기 전까지 상대는 이 내용을 볼 수 없어요.
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-8">
+<h3 class="subsection-title"><span class="sub-num">12.8</span>Partner Received</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">새로운 소곤파일이 열렸어요
+
+우리 벌써 100일 만났네. 사랑해.
+
+음식취향.zip
+“사실 나는 매운 음식을 잘 못 먹어.”
+</code></pre>
+</div>
+<p>반응:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">[🫶 말해줘서 고마워]
+[🙂 기억해둘게]
+[💛 귀엽다]
+[답장 남기기]
+</code></pre>
+</div>
+<p>버튼:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">[기록.zip에서 보기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-9">
+<h3 class="subsection-title"><span class="sub-num">12.9</span>Recommendation</h3>
+<div class="chapter-body"><p>연인 모드:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘의 추천.zip
+
+[밥] [카페] [실내] [산책] [랜덤]
+
+추천 코스:
+1. 조용한 파스타집
+2. 산책하기 좋은 카페거리
+3. 가벼운 디저트 카페
+
+추천 이유:
+두 사람의 취향을 조심스럽게 풀어봤어요.
+
+[다시 풀어보기]
+[이 코스로 정하기]
+</code></pre>
+</div>
+<p>친구 모드:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">오늘의 약속 추천.zip
+
+[밥] [카페] [전시] [쇼핑] [랜덤]
+
+추천 코스:
+1. 브런치 카페
+2. 소품샵
+3. 포토부스
+4. 디저트 카페
+
+추천 이유:
+서로의 취향을 조심스럽게 풀어봤어요.
+
+[다시 풀어보기]
+[이 약속으로 정하기]
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-12-10">
+<h3 class="subsection-title"><span class="sub-num">12.10</span>Record.zip / Calendar</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">기록.zip
+
+2026년 8월
+
+D+100
+우리가 하나 더 가까워진 날
+
+음식취향.zip이 열렸어요.
+“사실 나는 매운 음식을 잘 못 먹어.”
+
+반응:
+“말해줘서 고마워.”
+</code></pre>
+</div>
+<p>스탬프 타입:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">📁 저장됨
+🔒 닫힘
+🎁 열림
+💬 답장
+🍽 음식
+☕ 카페
+📅 기념일
+</code></pre>
+</div></div>
+</div>
+</section>
+<section class="chapter" id="sec-13">
+<header class="chapter-head"><span class="chapter-num">13</span><h2 class="chapter-title">디자인 시스템</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="subsection" id="sec-13-1">
+<h3 class="subsection-title"><span class="sub-num">13.1</span>전체 무드</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">트렌디한 1020 감성
+레트로 컴퓨터 폴더 UI
+부드러운 미니멀 감성
+너무 유치하지 않은 귀여움
+프라이버시가 느껴지는 안전한 공간
+친구/연인 모두 쓸 수 있는 중립적 따뜻함
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-13-2">
+<h3 class="subsection-title"><span class="sub-num">13.2</span>시각 스타일</h3>
+<div class="chapter-body"><h3 class="subhead" id="section_9">핵심 형태</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">폴더형 카드
+파일형 카드
+.zip 확장자 뱃지
+작은 파일 아이콘
+둥근 사각형
+레트로 OS 느낌의 탭
+부드러운 픽셀 감성은 가능하되 과하지 않게
+</code></pre>
+</div>
+<h3 class="subhead" id="section_10">색상</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Cream White
+Soft Lavender
+Pale Yellow
+Warm Pink
+Muted Mint
+Soft Gray
+Dark Navy Text
+</code></pre>
+</div>
+<h3 class="subhead" id="section_11">아이콘</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">📁 Folder
+📄 File
+🔒 Locked File
+🎁 Opened File
+💬 Whisper
+📅 Calendar
+🫶 Reaction
+.zip Badge
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-13-3">
+<h3 class="subsection-title"><span class="sub-num">13.3</span>UI 컴포넌트</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">SogonFileCard
+SogonFolderCard
+ZipBadge
+LockedFilePreview
+UnzipButton
+RecommendationZipCard
+SensitivityEmojiBar
+OpenScheduleSelector
+FileStatusTabs
+RecordStamp
+ReactionPill
+</code></pre>
+</div></div>
+</div>
+</section>
+<section class="chapter" id="sec-14">
+<header class="chapter-head"><span class="chapter-num">14</span><h2 class="chapter-title">데이터 모델 초안</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="subsection" id="sec-14-1">
+<h3 class="subsection-title"><span class="sub-num">14.1</span>User</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type User = {
+  id: string;
+  nickname: string;
+  createdAt: string;
+  updatedAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-2">
+<h3 class="subsection-title"><span class="sub-num">14.2</span>SogonRoom</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type SogonRoom = {
+  id: string;
+  type: "couple" | "friend";
+  inviteCode: string;
+  createdByUserId: string;
+  relationshipStartDate?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-3">
+<h3 class="subsection-title"><span class="sub-num">14.3</span>RoomMember</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type RoomMember = {
+  id: string;
+  roomId: string;
+  userId: string;
+  role: "owner" | "member";
+  joinedAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-4">
+<h3 class="subsection-title"><span class="sub-num">14.4</span>SogonFile</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type SogonFile = {
+  id: string;
+  ownerUserId: string;
+  roomId: string;
+
+  fileName: string;
+  tag: string;
+  category: SogonFileCategory;
+
+  content: string;
+
+  sensitivity: 1 | 2 | 3 | 4 | 5;
+
+  openPolicy: OpenPolicy;
+
+  openAfterDays?: number;
+  openDate?: string;
+
+  isOpened: boolean;
+  openedAt?: string;
+
+  recommendationEnabled: boolean;
+
+  status: SogonFileStatus;
+
+  createdAt: string;
+  updatedAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-5">
+<h3 class="subsection-title"><span class="sub-num">14.5</span>SogonFileCategory</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type SogonFileCategory =
+  | "food"
+  | "allergy"
+  | "cafe"
+  | "date_preference"
+  | "hobby"
+  | "lifestyle"
+  | "relationship_style"
+  | "family"
+  | "health"
+  | "secret"
+  | "sexual_preference"
+  | "gift"
+  | "travel"
+  | "custom";
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-6">
+<h3 class="subsection-title"><span class="sub-num">14.6</span>OpenPolicy</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type OpenPolicy =
+  | "open_now"
+  | "after_days"
+  | "specific_date"
+  | "anniversary"
+  | "manual_only"
+  | "never";
+</code></pre>
+</div>
+<p>설명:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">open_now: 지금 공개
+after_days: N일 후 열림 예정
+specific_date: 특정 날짜에 열림 예정
+anniversary: 100일, 200일, 1년 등 기념일 기준
+manual_only: 내가 직접 열게요
+never: 열고 싶지 않아요
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-7">
+<h3 class="subsection-title"><span class="sub-num">14.7</span>SogonFileStatus</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type SogonFileStatus =
+  | "locked"
+  | "scheduled"
+  | "ready_to_unzip"
+  | "opened"
+  | "postponed"
+  | "cancelled";
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-8">
+<h3 class="subsection-title"><span class="sub-num">14.8</span>UnzipEvent</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type UnzipEvent = {
+  id: string;
+  roomId: string;
+  fileId: string;
+
+  openerUserId: string;
+  receiverUserId: string;
+
+  title: string;
+  message?: string;
+
+  openedAt: string;
+  relationshipDay?: number;
+
+  stampText: string;
+
+  createdAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-14-9">
+<h3 class="subsection-title"><span class="sub-num">14.9</span>Reaction</h3>
+<div class="chapter-body"><div class="codecard lang-ts">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">model.ts</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-ts">type Reaction = {
+  id: string;
+  unzipEventId: string;
+  senderUserId: string;
+  receiverUserId: string;
+
+  type: "thanks" | "remember" | "cute" | "custom";
+  message?: string;
+
+  createdAt: string;
+};
+</code></pre>
+</div></div>
+</div>
+</section>
+<section class="chapter" id="sec-15">
+<header class="chapter-head"><span class="chapter-num">15</span><h2 class="chapter-title">추천 로직 초기 방향</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>MVP에서는 AI 없이 룰 기반 추천으로 시작한다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">SogonFile:
+태그: 음식
+내용: 매운 음식 싫어함
+추천 반영: ON
+공개 여부: false
+</code></pre>
+</div>
+<p>내부 추천 처리:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">spicy_food penalty -80
+non_spicy_food boost +30
+</code></pre>
+</div>
+<p>유저에게 보이는 설명:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">두 사람의 취향을 조심스럽게 풀어봤어요.
+</code></pre>
+</div>
+<p>보이면 안 되는 설명:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">상대가 매운 음식을 싫어해서 제외했어요.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-16">
+<header class="chapter-head"><span class="chapter-num">16</span><h2 class="chapter-title">보안 원칙</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>이 앱은 민감정보를 다룰 수 있으므로 보안이 중요하다.</p>
+<h3 class="subhead" id="mvp">MVP 보안 방향</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">카드/파일 내용 암호화 저장
+roomId와 membership 검증 후 접근
+공개 전 receiver는 content 조회 불가
+추천 로직은 서버에서 처리
+추천 이유에서 비공개 정보 직접 노출 금지
+민감도 4~5 파일은 열기 전 이중 확인
+</code></pre>
+</div>
+<h3 class="subhead" id="section_12">블록체인 활용은 후순위</h3>
+<p>블록체인을 활용할 경우:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">온체인:
+- 파일 해시
+- 공개 조건
+- 공개 가능 시점
+
+오프체인:
+- 암호화된 파일 내용
+- 유저 정보
+- 관계방 정보
+</code></pre>
+</div>
+<p>민감정보 원문은 절대 온체인에 올리지 않는다.</p></div>
+</section>
+<section class="chapter" id="sec-17">
+<header class="chapter-head"><span class="chapter-num">17</span><h2 class="chapter-title">BM 구조</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>BM은 “비밀을 여는 값”을 받으면 안 된다.</p>
+<p>돈을 받는 대상은 다음이다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">기록을 더 오래 보관하는 것
+파일을 더 예쁘게 꾸미는 것
+추천을 더 정교하게 받는 것
+소중한 순간을 더 좋은 형태로 저장하는 것
+</code></pre>
+</div></div>
+<div class="subsection" id="sec-17-1">
+<h3 class="subsection-title"><span class="sub-num">17.1</span>Free Plan</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">무료
+- 소곤방 1개
+- 소곤파일 10개
+- 기본 추천.zip
+- 기본 기록.zip
+- 텍스트 파일
+- 기본 반응
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-17-2">
+<h3 class="subsection-title"><span class="sub-num">17.2</span>Plus Plan</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Sogon.zip Plus
+월 8,900원
+
+- 소곤파일 100개
+- 커스텀 태그
+- 사진 파일
+- 기록.zip 테마
+- 기념일 알림
+- 월간 리포트
+- AI 추천.zip 월 20회
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-17-3">
+<h3 class="subsection-title"><span class="sub-num">17.3</span>Premium Plan</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Sogon.zip Premium
+월 12,900원
+
+- 소곤파일 무제한
+- 사진/음성 파일
+- 고급 기록.zip 테마
+- AI 추천.zip
+- 기념일 리포트
+- 우리.zip 내보내기
+- 고급 보안 잠금
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-17-4">
+<h3 class="subsection-title"><span class="sub-num">17.4</span>일회성 결제</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">100일 기념 파일팩: 3,900원
+1주년 우리.zip 내보내기: 9,900원~14,900원
+기록.zip 테마팩: 2,900원
+음성 파일 기능 해금: 4,900원
+Open 기록 PDF 내보내기: 7,900원
+</code></pre>
+</div></div>
+</div>
+</section>
+<section class="chapter" id="sec-18">
+<header class="chapter-head"><span class="chapter-num">18</span><h2 class="chapter-title">MVP 우선순위</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="subsection" id="sec-18-1">
+<h3 class="subsection-title"><span class="sub-num">18.1</span>반드시 필요한 기능</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1. 온보딩
+2. 연인/친구 선택
+3. 소곤방 생성/참여
+4. 소곤파일 작성
+5. 파일별 민감도 설정
+6. 파일별 열림 시점 설정
+7. 추천 반영 ON/OFF
+8. 내 소곤폴더
+9. 열기 전 작성자 확인
+10. 상대방 수신 화면
+11. 반응 남기기
+12. 기록.zip 저장
+13. 기본 추천.zip
+</code></pre>
+</div></div>
+</div>
+<div class="subsection" id="sec-18-2">
+<h3 class="subsection-title"><span class="sub-num">18.2</span>후순위 기능</h3>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1. 친구 그룹 모드
+2. AI 추천
+3. 지도 기반 장소 추천
+4. 사진/음성 파일
+5. 우리.zip 내보내기
+6. 블록체인 공개 조건 증명
+7. 커플/친구 리포트
+8. 위젯
+</code></pre>
+</div></div>
+</div>
+</section>
+<section class="chapter" id="sec-19">
+<header class="chapter-head"><span class="chapter-num">19</span><h2 class="chapter-title">Figma 디자인 방향</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="section_13">핵심 플로우</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Intro
+→ 연인/친구 선택
+→ 소곤방 생성
+→ 새 소곤파일 만들기
+→ 내 소곤폴더
+→ 열기 확인
+→ 상대방 수신
+→ 추천.zip
+→ 기록.zip
+</code></pre>
+</div>
+<h3 class="subhead" id="section_14">가장 중요한 데모 플로우</h3>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">새 소곤파일 만들기
+→ 오늘 열릴 소곤파일 확인
+→ 상대방에게 파일 열림
+→ 기록.zip에 저장
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-20">
+<header class="chapter-head"><span class="chapter-num">20</span><h2 class="chapter-title">Figma 프롬프트용 요약</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Create a mobile app UI for a Korean relationship-based preference archive app called “Sogon.zip / 소곤.zip”.
+
+The name means both:
+1. A .zip file of quietly shared whispers and preferences.
+2. A private little home where close people whisper to each other.
+
+The target users are couples and close friends, especially 1020 users who understand the “맛집.zip / 여행.zip / 추억.zip” internet naming culture.
+
+The app lets users create private “소곤파일” that store preferences, allergies, date styles, cafe preferences, secrets, gift preferences, and small personal stories.
+
+Each 소곤파일 has:
+- file name
+- tag
+- content
+- sensitivity
+- open/unzip timing
+- recommendation reflection ON/OFF
+
+Private files can still be reflected in recommendations, but the content is not shown to the partner/friend until the owner confirms opening it.
+
+The core UI metaphor should be:
+- computer folder
+- .zip file
+- locked file
+- unzip/open interaction
+- file explorer
+- private home/archive
+
+The app should feel:
+- trendy
+- soft
+- private
+- warm
+- slightly retro computer folder style
+- emotionally safe
+- not childish
+- suitable for both couples and friends
+
+Main screens:
+1. Intro
+2. Relationship selection: lover or friend
+3. Create/join Sogon room
+4. Home
+5. Create Sogon File
+6. My Sogon Folder
+7. Unzip Confirmation
+8. Partner/Friend Received File
+9. Recommendation.zip
+10. Record.zip Calendar
+
+Use Korean UI copy.
+Use rounded folder/file cards.
+Use soft cream, lavender, warm yellow, muted pink, and light gray colors.
+Use folder, file, lock, zip badge, calendar, gift, and message icons.
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-21">
+<header class="chapter-head"><span class="chapter-num">21</span><h2 class="chapter-title">현재 최종 결론</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><p>Sogon.zip / 소곤.zip은 다음 앱이다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">가까운 사람과 나누고 싶은 취향과 마음을 소곤파일로 저장한다.
+각 파일은 민감도와 열림 시점을 가진다.
+닫힌 파일도 추천에는 반영될 수 있다.
+하지만 상대방은 작성자가 확인하기 전까지 파일 내용을 볼 수 없다.
+열린 파일은 상대에게 전달되고, 반응을 남길 수 있다.
+그 순간은 기록.zip에 저장된다.
+</code></pre>
+</div>
+<p>핵심 차별점:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">취향 기반 추천
++ 관계별 비공개 취향 저장
++ 기념일/특정일 압축 해제
++ 폴더/zip 기반 트렌디한 UI
+</code></pre>
+</div></div>
+</section>
+<section class="chapter" id="sec-22">
+<header class="chapter-head"><span class="chapter-num">22</span><h2 class="chapter-title">데이트 추천 시스템 기술 아카이브</h2><span class="chapter-tag">SOGON.ZIP</span></header>
+<div class="chapter-body"><h3 class="subhead" id="sec-22-1">22.1 추천 시스템 방향</h3>
+<p>Sogon.zip의 데이트/약속 추천은 단순히 취향 태그가 많이 겹치는 장소를 고르는 방식보다, <strong>현실 제약을 먼저 만족시키고 취향 조건을 단계적으로 적용하는 추천 파이프라인</strong>이 잘 맞는다.</p>
+<p>핵심 방향은 다음과 같다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Hard Constraint는 반드시 지킨다.
+Soft Constraint는 우선순위에 따라 적용한다.
+결과가 부족하면 낮은 우선순위 조건부터 완화한다.
+최종 결과는 코스 흐름과 두 사람의 취향 균형을 기준으로 랭킹한다.
+</code></pre>
+</div>
+<p>추천 시스템 이름 후보:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Constraint Relaxation 기반 Cascade Date Course Recommendation System
+</code></pre>
+</div>
+<p>한글 설명:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">제약 완화 기반 다단계 데이트 코스 추천 시스템
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-2">22.2 핵심 기술 용어</h3>
+<h4 id="sec-1_3">1. Cascade Filtering / 다단계 추천 파이프라인</h4>
+<p>우선순위가 높은 조건부터 차례대로 적용하면서 후보 장소 Pool을 좁혀가는 방식이다.</p>
+<p>Sogon.zip에서는 다음 순서로 사용할 수 있다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">지역/반경 필터링
+→ 운영 시간/기간 필터링
+→ 관계 타입 필터링
+→ 취향 태그 매칭
+→ 코스 흐름 점수화
+→ 최종 랭킹
+</code></pre>
+</div>
+<p>대용량 추천 시스템의 일반적인 구조인 <code>Retrieval → Filtering → Scoring → Ranking</code>과도 잘 맞는다.</p>
+<h4 id="sec-2_2">2. Constraint Relaxation / 제약 완화</h4>
+<p>모든 조건을 만족하는 결과가 없을 때, 우선순위가 낮은 조건부터 하나씩 제거하거나 약화해서 추천 결과를 확보하는 방식이다.</p>
+<p>데이트 추천에서는 과제약 상태가 자주 생긴다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">성수
+반경 1km
+조용한 카페
+디저트 맛집
+루프탑
+전시 근처
+비 오는 날 적합
+오늘 19시 이후 영업
+</code></pre>
+</div>
+<p>위 조건을 모두 만족하는 장소가 없으면 다음처럼 완화한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1차: 루프탑 조건 제거
+2차: 반경 1km → 1.5km로 확장
+3차: 디저트 맛집 → 카페 태그로 완화
+4차: 전시 근처 조건을 Nice-to-have로 변경
+</code></pre>
+</div>
+<p>Sogon.zip의 추천 로직에서 가장 중요한 알고리즘 개념으로 볼 수 있다.</p>
+<h4 id="sec-3_1">3. Elimination by Aspects / 속성별 제거 모형</h4>
+<p>가장 중요한 속성을 만족하지 않는 후보를 먼저 제거하고, 남은 후보에 대해 다음 속성을 적용하는 순차적 필터링 방식이다.</p>
+<p>Sogon.zip에서는 다음처럼 활용할 수 있다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1순위: 둘 다 싫어하지 않는 장소인가?
+2순위: 시간/거리 조건을 만족하는가?
+3순위: 최소 한 명의 강한 선호와 맞는가?
+4순위: 대화하기 좋은 분위기인가?
+5순위: 다음 코스와 이동 동선이 자연스러운가?
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-3">22.3 Hard Constraint와 Soft Constraint</h3>
+<h4 id="hard-constraint">Hard Constraint</h4>
+<p>깨면 추천 품질이 바로 무너지는 조건이다. 결과가 부족해도 쉽게 완화하지 않는다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">영업 중 여부
+예약 가능 여부
+전시/팝업 기간
+영화 상영 시간
+이동 가능 시간
+알레르기/절대 비선호
+예산 상한
+이미 방문한 장소 제외 여부
+</code></pre>
+</div>
+<h4 id="soft-constraint">Soft Constraint</h4>
+<p>만족하면 좋지만, 결과가 부족하면 우선순위에 따라 완화할 수 있는 조건이다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">감성적인 분위기
+조용함
+사진 찍기 좋음
+디저트 맛집
+루프탑
+실내/실외 선호
+핫플 여부
+카페/전시/영화/산책 등 활동 취향
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-4">22.4 추천 파이프라인 초안</h3>
+<h4 id="sec-1_4">1단계. Spatial Filtering</h4>
+<p>카카오맵 중심점 또는 선택 지역을 기준으로 후보 장소를 가져온다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">홍대
+성수
+연남
+강남
+잠실
+</code></pre>
+</div>
+<p>후보 Pool:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">음식점
+카페
+전시
+팝업
+영화관
+산책 장소
+소품샵
+포토부스
+</code></pre>
+</div>
+<h4 id="sec-2_3">2단계. Time &amp; Availability Filtering</h4>
+<p>실시간성이 강한 조건을 먼저 처리한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">현재 영업 중인가?
+오늘 방문 가능한가?
+전시/팝업 기간 안에 있는가?
+영화 시간이 코스 흐름과 맞는가?
+예약이 필요한가?
+</code></pre>
+</div>
+<h4 id="sec-3_2">3단계. Tag Matching</h4>
+<p>두 사용자의 취향 태그를 비교한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">User A tags
+User B tags
+Intersection = 둘 다 좋아하는 것
+Union = 둘 중 한 명이라도 좋아하는 것
+Blocked = 한 명이라도 강하게 싫어하는 것
+</code></pre>
+</div>
+<p>추천 반영 방식:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">교집합 태그는 높은 가중치
+합집합 태그는 중간 가중치
+강한 비선호 태그는 감점 또는 제외
+비공개 소곤파일의 태그는 추천에는 반영하되 이유는 숨김
+</code></pre>
+</div>
+<h4 id="sec-4_1">4단계. Cascade Scoring</h4>
+<p>후보 장소와 코스를 점수화한다.</p>
+<p>예시 점수:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">tagMatchScore
+distanceScore
+timeFitScore
+courseFlowScore
+noveltyScore
+budgetScore
+relationshipMoodScore
+</code></pre>
+</div>
+<p>최종 점수 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">finalScore =
+  tagMatchScore * 0.35
+  + timeFitScore * 0.20
+  + distanceScore * 0.15
+  + courseFlowScore * 0.15
+  + noveltyScore * 0.10
+  + budgetScore * 0.05
+</code></pre>
+</div>
+<h4 id="sec-5_1">5단계. Fallback via Constraint Relaxation</h4>
+<p>결과가 부족하면 낮은 우선순위 조건부터 완화한다.</p>
+<p>예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">추천 후보가 3개 미만이면:
+1. 낮은 우선순위 Soft Tag 제거
+2. 검색 반경 확장
+3. 합집합 태그 기반 후보 추가
+4. 인기 장소/검증된 장소를 보조 후보로 추가
+5. 코스 개수를 3개 → 2개로 축소
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-5">22.5 Sogon.zip에 맞는 추천 UX 원칙</h3>
+<p>추천 이유는 너무 직접적으로 말하지 않는다.</p>
+<p>나쁜 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">상대가 매운 음식을 싫어해서 마라탕을 제외했어요.
+</code></pre>
+</div>
+<p>좋은 예시:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">두 분이 부담 없이 즐길 수 있는 코스로 골라봤어요.
+</code></pre>
+</div>
+<p>또는:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">서로의 취향을 조심스럽게 풀어봤어요.
+</code></pre>
+</div>
+<p>비공개 소곤파일은 추천에 반영될 수 있지만, 그 내용 자체를 추천 설명에 노출하지 않는다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">사용자에게 보여줄 것: 추천 결과, 부드러운 이유, 코스 흐름
+사용자에게 숨길 것: 상대의 비공개 파일 내용, 민감한 취향 원문
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-6">22.6 MVP 구현 범위</h3>
+<p>처음부터 완전한 AI 추천으로 만들 필요는 없다. MVP에서는 규칙 기반 추천으로도 충분하다.</p>
+<p>MVP 추천 로직:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">1. 지역 선택
+2. 두 사람의 태그 불러오기
+3. 금지/비선호 태그 제외
+4. 교집합 태그 우선 매칭
+5. 결과 부족 시 합집합 태그로 확장
+6. 거리와 시간 조건으로 정렬
+7. 추천.zip 형태로 2~3개 코스 제안
+</code></pre>
+</div>
+<p>추후 확장:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">클릭/저장/방문 피드백 기반 개인화
+날씨 기반 추천
+기념일 기반 추천
+혼잡도 반영
+LLM 기반 코스 설명 생성
+카카오맵 API 기반 실시간 장소 후보 확장
+팝업/전시/영화 API 연동
+</code></pre>
+</div>
+<h3 class="subhead" id="sec-22-7">22.7 최종 판단</h3>
+<p>이 기술 조합은 Sogon.zip의 데이트 추천 문제와 잘 맞는다.</p>
+<p>이유:</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">데이트 추천은 조건이 많아 과제약 상태가 자주 생긴다.
+두 사람의 취향을 동시에 고려해야 한다.
+비공개 취향을 추천에는 반영하되 직접 노출하면 안 된다.
+실시간 장소/시간/기간 제약이 중요하다.
+추천 결과가 없을 때 자연스럽게 차선책을 만들어야 한다.
+</code></pre>
+</div>
+<p>따라서 Sogon.zip의 추천 시스템은 다음 방향으로 설계한다.</p>
+<div class="codecard lang-txt">
+<div class="codecard-bar"><span class="codecard-dot"></span><span class="codecard-label">file.txt</span><button class="copy-btn" type="button" aria-label="복사">복사</button></div>
+<pre class="codecard-pre"><code class="lang-txt">Hard Constraint로 현실 가능성을 보장하고,
+Soft Constraint로 취향 만족도를 높이며,
+Constraint Relaxation으로 결과 없음 문제를 해결하는
+Cascade 기반 데이트 코스 추천 시스템.
+</code></pre>
+</div></div>
+</section>
+
+    <div class="doc-footer">
+      <span>소곤.zip / Sogon.zip Development Archive</span>
+      <span>“취향은 추천으로 풀리고, 마음은 정해둔 날에 열려요.”</span>
+    </div>
+  </main>
+</div>
+
+<button class="top-btn" id="topBtn" aria-label="맨 위로">↑</button>
+
+<script>
+// sidebar toggle (mobile)
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('sidebarToggle');
+const backdrop = document.getElementById('sidebarBackdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+function openSidebar(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+toggleBtn.addEventListener('click', ()=> sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+backdrop.addEventListener('click', closeSidebar);
+document.querySelectorAll('.nav-link').forEach(a=>{
+  a.addEventListener('click', ()=>{ if(window.innerWidth<=920) closeSidebar(); });
+});
+
+// search filter
+const searchInput = document.getElementById('navSearch');
+searchInput.addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.nav-chapter').forEach(li=>{
+    const chapterLink = li.querySelector(':scope > a');
+    const chapterText = chapterLink.textContent.toLowerCase();
+    const subLinks = li.querySelectorAll('.nav-link-sub');
+    let anySubMatch = false;
+    subLinks.forEach(sl=>{
+      const match = sl.textContent.toLowerCase().includes(q);
+      sl.parentElement.style.display = match || !q ? '' : 'none';
+      if(match) anySubMatch = true;
+    });
+    const chapterMatch = chapterText.includes(q);
+    li.style.display = (!q || chapterMatch || anySubMatch) ? '' : 'none';
+  });
+});
+
+// scrollspy
+const links = Array.from(document.querySelectorAll('.nav-link'));
+const targets = links.map(l=> document.getElementById(l.dataset.id)).filter(Boolean);
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    const id = entry.target.id;
+    const link = links.find(l=> l.dataset.id === id);
+    if(!link) return;
+    if(entry.isIntersecting){
+      links.forEach(l=>l.classList.remove('active'));
+      link.classList.add('active');
+    }
+  });
+},{ rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+targets.forEach(t=> io.observe(t));
+
+// back to top
+const topBtn = document.getElementById('topBtn');
+window.addEventListener('scroll', ()=>{
+  topBtn.classList.toggle('show', window.scrollY > 600);
+});
+topBtn.addEventListener('click', ()=> window.scrollTo({top:0, behavior:'smooth'}));
+
+// copy buttons
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.codecard').querySelector('code');
+    navigator.clipboard.writeText(code.textContent).then(()=>{
+      const original = btn.textContent;
+      btn.textContent = '복사됨';
+      setTimeout(()=> btn.textContent = original, 1200);
+    });
+  });
+});
+</script>
+</body>
+</html>
