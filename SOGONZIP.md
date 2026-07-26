@@ -92,6 +92,51 @@ Avoid:
 - 단조로운 보라색 일변도
 - 자동 공개처럼 느껴지는 압박감 있는 UX
 
+### Brand Mark
+
+이름의 뜻이 곧 심볼이다. **소곤소곤 나눈 둘만의 비밀스러운 취향과 정보가 하나로 합쳐진 `.zip` 파일.**
+
+- **말풍선** = 말
+- **작은 점 ⋯ 두 세트** = 소곤소곤 — 작은 소리가 서로 오간다
+- **맞물린 사각 톱니(지퍼)** = `.zip` — 둘의 것이 맞물려 하나로 합쳐지고, 닫혀 있다(비밀)
+- **coral `#F58AA3` / lavender `#A996E8` 두 색** = 두 사람
+
+⚠️ **점을 굵은 막대로 바꾸지 말 것.** 소곤소곤은 ① 작고 ② 조용하고 ③ 반복되는 소리다.
+말풍선만으로는 "말한다"이지 "소곤거린다"가 아니다. 점의 **작음**이 소곤을 만들고,
+**두 세트**가 반복(소곤+소곤)과 두 사람을 동시에 만든다. 막대로 바꾸는 순간 큰 소리가 되어
+소곤이 사라진다. 점 2개(`..`)로 줄여도 웅얼거림으로 안 읽히니 **한쪽에 3개**를 유지한다.
+
+⚠️ **집(house)을 쓰지 않는다.** `.zip`을 "둘만의 집"으로 읽은 초기 시안이 있었는데 뜻이 틀렸다.
+`.zip`은 압축 파일이지 집이 아니다.
+
+⚠️ **하트를 쓰지 않는다.** Avoid의 "지나친 하트 장식". 하트를 넣는 순간 데이팅 앱 아이콘
+수백 개와 구분이 안 된다.
+
+⚠️ **지퍼 이빨은 반드시 사각 톱니다.** V자 지그재그로 그리면 지퍼가 아니라 **찢어진 종이**로
+읽힌다 (관계 앱에 최악의 함의). 96/48/24/16px를 크림·네이비·화이트 배경에 얹어
+헤드리스 Chrome으로 실제 렌더해 확인한 결과다 — 눈으로 보기 전에는 판단하지 말 것.
+
+에셋 위치 — **패스를 고칠 때는 아래를 전부 같이 고쳐야 한다**:
+
+| 파일 | 용도 |
+| --- | --- |
+| `FE/ProtoWeb/public/logo.svg` | 마스터 마크. 파비콘도 이 파일을 쓴다 (별도 변형 없음) |
+| `FE/ProtoWeb/public/apple-touch-icon.png` | 180x180, 크림 배경 |
+| `FE/ProtoWeb/public/og-image.png` | 1200x630, 카톡/슬랙 링크 미리보기 |
+| `FE/ProtoWeb/src/app/components/SogonMark.tsx` | 앱 안에서 쓰는 React 버전 |
+
+`SogonMark`는 clipPath id를 `useId()`로 네임스페이스한다. 하드코딩하면 한 화면에
+마크가 두 개 이상 놓일 때 클립이 서로 충돌한다.
+`seam` prop은 지퍼 이음선과 소곤 점의 색이며 **놓이는 배경색과 같아야** 자연스럽다.
+
+⚠️ OG 이미지 주소는 아직 상대 경로다. 도메인이 정해지면 `index.html`에서 절대 URL로
+바꿔야 한다 (`BETA_DEPLOY.md` 12번 참고).
+
+### 한글 줄바꿈
+
+한글은 기본적으로 단어 중간에서 잘린다. 큰 제목에는 `break-keep`
+(`word-break: keep-all`)을 붙여야 마지막 한 글자가 혼자 다음 줄로 떨어지지 않는다.
+
 ## Key User Flow
 
 1. Intro
@@ -101,7 +146,8 @@ Avoid:
    연인 또는 친구와 시작할 관계 유형을 고른다.
 
 3. Sign up and find my person
-   아이디/비밀번호로 가입하고, 상대의 계정 코드로 내 사람을 찾아 연결한다.
+   아이디/비밀번호로 가입하고, 상대의 계정 코드로 내 사람을 찾아 연결 요청을 보낸다.
+   상대가 수락해야 연결이 완료된다. 수락 전까지는 서로의 소곤파일이 보이지 않는다.
 
 4. Home
    오늘의 추천, 다가오는 소곤파일, 최근 기록을 본다.
@@ -247,7 +293,8 @@ Purpose:
 Important files:
 
 - `FE/ProtoWeb/src/main.tsx`: React entry point.
-- `FE/ProtoWeb/src/app/App.tsx`: ProtoWeb routes.
+- `FE/ProtoWeb/src/app/App.tsx`: ProtoWeb routes. 공개 / 로그인 전용 / 보호 라우트를 나눠둔다.
+- `FE/ProtoWeb/src/app/lib/session.tsx`: 세션 컨텍스트와 라우트 가드(`RequireAuth`, `RedirectIfAuthed`).
 - `FE/ProtoWeb/src/app/components/LoginScreen.tsx`: beta login screen. Existing users sign in with their id/password.
 - `FE/ProtoWeb/src/app/components/CreateJoinRoom.tsx`: signup and "find my person" screen. Users create an account, receive their own account code, then connect to a partner by entering that partner's account code.
 - `FE/ProtoWeb/src/app/components/HomeScreen.tsx`: beta home. Syncs remote files/preferences after login.
@@ -346,7 +393,7 @@ Stack:
 - Cloudflare Pages Functions
 - TypeScript
 - Cloudflare D1
-- Lightweight token model using the member id as the bearer token for beta testing
+- Session tokens stored in a `sessions` table (the token itself is never stored, only its SHA-256 hash)
 
 Purpose:
 
@@ -358,23 +405,83 @@ Purpose:
 
 Important files:
 
-- `BE/functions/api/_shared.ts`: shared API helpers, JSON responses, id generation, password hashing, auth lookup.
+- `shared/sogonOpening.ts`: **열림 시점 도메인 규칙의 단일 소스.** FE와 BE가 함께 import한다. 옵션 라벨을 여기 말고 다른 곳에 정의하지 않는다.
+- `BE/functions/api/_shared.ts`: shared API helpers, `handle()` error wrapper, PBKDF2 password hashing, session create/verify, login throttle, room capacity, lazy open-time promotion.
 - `BE/functions/api/auth/signup.ts`: beta account signup and account-code generation.
-- `BE/functions/api/auth/login.ts`: beta account login.
-- `BE/functions/api/auth/me.ts`: current member/profile lookup.
+- `BE/functions/api/auth/login.ts`: beta account login. Verifies PBKDF2, transparently upgrades legacy hashes.
+- `BE/functions/api/auth/logout.ts`: revoke the current session.
+- `BE/functions/api/auth/me.ts`: current member/profile lookup (GET), 회원 탈퇴 (DELETE).
+- `BE/functions/api/people/disconnect.ts`: 연결 해제. 방을 해체하고 공유 기록을 지운다.
+- `BE/functions/api/people/_link.ts`: connection guards (`assertCanConnect`) and the actual room join (`linkMembers`).
 - `BE/functions/api/people/find.ts`: find a potential partner by account code.
-- `BE/functions/api/people/connect.ts`: connect two accounts into one shared Sogon room.
-- `BE/functions/api/files/index.ts`: list and create Sogon files for the current room.
-- `BE/functions/api/files/[id].ts`: update a Sogon file in the current room.
+- `BE/functions/api/people/connect.ts`: **연결 요청을 보낸다.** 바로 연결하지 않는다.
+- `BE/functions/api/people/requests.ts`: list pending requests, and accept / decline / cancel.
+- `BE/functions/api/files/index.ts`: list and create Sogon files. 조회는 내 파일 + 열린 파일만 내려준다.
+- `BE/functions/api/files/[id].ts`: update (PATCH) / delete (DELETE) a Sogon file. 작성자 본인만 가능하고, 열린 파일은 수정 불가(삭제는 가능).
 - `BE/functions/api/preferences/index.ts`: list and create preference DB entries for the current room.
-- `functions/api/*`: Cloudflare Pages root adapter that re-exports from `BE/functions/api/*`. Do not put business logic here.
+- `functions/api/*`: Cloudflare Pages root adapter that re-exports from `BE/functions/api/*`. Do not put business logic here. 새 라우트를 추가하면 여기에도 어댑터를 만들어야 한다.
 
 Cloudflare requirement:
 
 - Create a D1 database, for example `sogonzip-db`.
-- Run `BE/migrations/0001_beta_schema.sql` in that D1 database.
+- Run the migrations in order in that D1 database:
+  - `BE/migrations/0001_beta_schema.sql`
+  - `BE/migrations/0002_security_and_scheduling.sql` (한 번만 실행. `ALTER TABLE ADD COLUMN`은 재실행하면 실패한다.)
 - Bind the database to the Pages project with variable name `DB`.
 - Redeploy after adding the binding.
+
+### Security model (updated)
+
+- 비밀번호: 유저별 16바이트 salt + PBKDF2-SHA256. 반복 횟수는 `password_algo`에
+  `pbkdf2-sha256-50000` 형태로 함께 저장한다. Cloudflare 무료 플랜 CPU 한도(요청당 10ms)
+  때문에 50k로 잡았다. 유료 플랜으로 올리면 `_shared.ts`의 `PBKDF2_ITERATIONS`만 올리면
+  되고, 기존 계정은 다음 로그인 성공 시 자동으로 재해싱된다.
+- 0001 스키마로 만든 기존 계정은 `sha256-legacy`로 남아 있다가 로그인 성공 시 자동 전환된다.
+- 세션: 32바이트 랜덤 토큰. DB에는 SHA-256 해시만 저장하고 30일 만료 + 슬라이딩 연장.
+  로그아웃은 해당 행을 삭제한다.
+- 로그인 시도 제한: 15분에 10회 실패하면 15분 잠금 (`auth_attempts`).
+- 연결: 계정 코드를 아는 것만으로 연결되지 않는다. 상대가 `people/requests`에서
+  수락해야 한다. 한 방의 정원은 `ROOM_CAPACITY = 2`로 고정.
+- 소곤파일: 상대에게는 `status = 'opened'`인 파일만 내려간다. 수정/삭제/개봉은 작성자 본인만.
+
+### 삭제 모델
+
+- **소곤파일 삭제**: 작성자 본인만. 이미 열린 파일도 지울 수 있다(작성자에게 마지막 권한이 있어야 한다).
+  열린 파일을 지우면 상대의 기록에서도 사라지므로 UI에서 그 사실을 알린다.
+- **연결 해제**: 방을 해체하고 그 방의 소곤파일·취향 기록을 모두 지운다. 되돌릴 수 없다.
+  소곤폴더는 두 사람의 공유 아카이브라, 한쪽만 빠지면 남은 쪽이 상대 없는 방에 갇히기 때문이다.
+- **회원 탈퇴**: 계정, 세션, 내가 쓴 소곤파일과 취향 기록을 지운다. 연결 상태였다면 방도 함께 해체된다.
+
+> ⚠️ **`rooms`를 직접 DELETE하지 말 것.**
+> `members.room_id`에 `REFERENCES rooms(id) ON DELETE CASCADE`가 걸려 있어서,
+> 방을 먼저 지우면 그 방에 속한 **계정까지 함께 삭제된다.**
+> 방 해체는 반드시 `_shared.ts`의 `dissolveRoom()`을 쓴다.
+> (멤버를 먼저 `room_id = NULL`로 떼어낸 뒤 방을 지운다.)
+> 이 동작은 `scripts/test.mjs`에서 회귀 테스트로 고정돼 있다.
+
+### 라우트 가드
+
+`FE/ProtoWeb/src/app/lib/session.tsx`
+
+- 앱 시작 시 토큰이 있으면 `/api/auth/me`로 세션이 살아있는지 확인한 뒤에 보호 화면을 그린다.
+  확인이 끝나기 전에는 로딩 화면을 보여주고, 절대 통과시키지 않는다.
+- 공개: `/`, `/intro`, `/relationship`, `/create-room`(가입 화면이라 비로그인도 필요)
+- 로그인 상태면 진입 불가: `/login` → `/home`
+- 보호: `/home`, `/create-file`, `/my-folder`, `/unzip`, `/received`, `/recommendation`, `/record`, `/plus`
+- 가드에 막히면 원래 가려던 경로를 들고 `/login`으로 가고, 로그인 후 그곳으로 돌아간다.
+- 화면을 보는 도중 세션이 만료되면(어떤 API든 401) `onSessionExpired`로 가드가 즉시 반응한다.
+
+> ⚠️ **`/api/*` 응답은 반드시 JSON인지 확인할 것.**
+> `public/_redirects`의 `/* /index.html 200` 때문에, 라우팅되지 않은 `/api/*`는
+> 404가 아니라 **index.html을 200으로** 돌려준다. 이걸 성공으로 받으면
+> 로그인하지 않은 사용자가 통과한다. `apiFetch`가 `content-type`을 확인하고,
+> `fetchCurrentProfile`은 프로필 모양까지 검증한다. 이 두 검사를 제거하지 말 것.
+> (실제로 헤드리스 브라우저로 앱을 돌려보다가 발견한 버그다.)
+
+Still missing before public release:
+
+- 이메일 인증, 비밀번호 재설정
+- 삭제 전 데이터 내보내기 (지금은 탈퇴하면 바로 사라진다)
 
 ### BE / D1 Data Model
 
@@ -386,15 +493,12 @@ Tables:
 
 - `rooms`: one shared couple/friend archive room, created when two accounts connect.
 - `members`: beta login accounts. Each member has an `account_code`; `room_id` is empty until connected.
-- `sogon_files`: private files saved inside a room.
+- `sogon_files`: private files saved inside a room. `opening_at`(ISO)이 실제 개봉 시각이고,
+  `opening_time`은 사용자에게 보여주는 라벨이다. `opening_at`이 NULL이면 자동 개봉되지 않는다.
 - `preferences`: recommendation preference DB entries saved inside a room.
-
-Important beta limitation:
-
-- This is not full production authentication.
-- Passwords are SHA-256 hashed with a project prefix, but there is no email verification or password reset.
-- Bearer tokens are member ids, which is acceptable only for early private beta testing.
-- Before public release, replace this with real auth/session handling.
+- `sessions`: 로그인 세션. 토큰 원문은 저장하지 않고 SHA-256 해시만 저장한다.
+- `connection_requests`: 연결 요청과 그 응답 상태.
+- `auth_attempts`: 로그인 실패 횟수와 잠금 시각.
 
 ## Mobile MVP Implemented So Far
 
@@ -588,9 +692,17 @@ Unzip confirmation:
 
 ## Verification Commands
 
-Web:
+Web + BE (한 번에):
 
 ```bash
+yarn verify   # typecheck -> P0 회귀 테스트 -> build
+```
+
+개별 실행:
+
+```bash
+yarn typecheck   # tsc --noEmit. shared/, FE/ProtoWeb/, BE/functions/를 모두 검사한다.
+yarn test        # scripts/test.mjs. 파일 가시성 / 방 정원 / 열림 시점 / 비밀번호 회귀 테스트
 yarn build
 yarn npm audit --environment production
 ```

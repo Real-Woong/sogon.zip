@@ -1,13 +1,26 @@
-import { all, Env, json, newId, readJson, requireMember } from '../_shared';
+import {
+  all,
+  Env,
+  handle,
+  json,
+  newId,
+  promoteReadyFiles,
+  readJson,
+  requireMember,
+  resolveOpening
+} from '../_shared';
+import type { SogonFileStatus } from '../../../../shared/sogonOpening';
 
 type FileRow = {
   id: string;
+  author_member_id: string;
   tags_json: string;
   content: string;
   sensitivity: string;
   opening_time: string;
+  opening_at: string | null;
   recommendation_on: number;
-  status: 'scheduled' | 'ready' | 'opened' | 'closed';
+  status: SogonFileStatus;
   created_at: string;
 };
 
@@ -16,51 +29,61 @@ type CreateFileInput = {
   content?: string;
   sensitivity?: string;
   openingTime?: string;
+  /** '직접 날짜 선택'일 때의 실제 날짜 (ISO 또는 YYYY-MM-DD) */
+  openingAt?: string | null;
   recommendationOn?: boolean;
-  status?: 'scheduled' | 'ready' | 'opened' | 'closed';
 };
 
-function toFile(row: FileRow) {
+function toFile(row: FileRow, viewerId: string) {
   return {
     id: row.id,
-    tags: JSON.parse(row.tags_json) as string[],
+    tags: parseTags(row.tags_json),
     content: row.content,
     sensitivity: row.sensitivity,
     openingTime: row.opening_time,
+    openingAt: row.opening_at,
     recommendationOn: Boolean(row.recommendation_on),
     status: row.status,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    isMine: row.author_member_id === viewerId
   };
 }
 
-function statusFromOpeningTime(openingTime: string) {
-  if (openingTime === '지금 알려도 좋아요') {
-    return 'ready';
+function parseTags(tagsJson: string): string[] {
+  try {
+    const parsed = JSON.parse(tagsJson);
+    return Array.isArray(parsed) ? parsed.map(String) : ['기타'];
+  } catch {
+    return ['기타'];
   }
-  if (openingTime === '열고 싶지 않아요') {
-    return 'closed';
-  }
-  return 'scheduled';
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) => {
   const member = await requireMember(request, env);
 
   if (!member.room_id) {
     return json({ files: [] });
   }
 
+  // 개봉 시각이 지난 파일을 먼저 ready로 올린다. (별도 스케줄러 없이 지연 승격)
+  await promoteReadyFiles(env, member.room_id);
+
+  // 상대에게는 "열린 파일"만 보인다.
+  // 예전 쿼리는 room_id만으로 필터해서, 아직 열지 않은 소곤파일의 원문이
+  // 상대에게 그대로 내려갔다. 제품의 첫 번째 약속을 정면으로 어기는 버그였다.
   const rows = await all<FileRow>(env.DB.prepare(
-    `SELECT id, tags_json, content, sensitivity, opening_time, recommendation_on, status, created_at
+    `SELECT id, author_member_id, tags_json, content, sensitivity, opening_time, opening_at,
+            recommendation_on, status, created_at
        FROM sogon_files
       WHERE room_id = ?
+        AND (author_member_id = ? OR status = 'opened')
       ORDER BY created_at DESC`
-  ).bind(member.room_id));
+  ).bind(member.room_id, member.id));
 
-  return json({ files: rows.map(toFile) });
-};
+  return json({ files: rows.map(row => toFile(row, member.id)) });
+});
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env }) => {
   const member = await requireMember(request, env);
 
   if (!member.room_id) {
@@ -69,11 +92,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const input = await readJson<CreateFileInput>(request);
   const content = input.content?.trim();
-  const openingTime = input.openingTime ?? '내가 직접 열게요';
 
   if (!content) {
     return json({ error: '압축할 내용을 입력해주세요.' }, { status: 400 });
   }
+
+  const opening = resolveOpening({
+    openingTime: input.openingTime,
+    openingAt: input.openingAt
+  });
 
   const now = new Date().toISOString();
   const file = {
@@ -81,16 +108,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     tags: input.tags?.length ? input.tags : ['기타'],
     content,
     sensitivity: input.sensitivity ?? '🙂',
-    openingTime,
+    openingTime: opening.openingTime,
+    openingAt: opening.openingAt,
     recommendationOn: input.recommendationOn ?? true,
-    status: input.status ?? statusFromOpeningTime(openingTime),
-    createdAt: now
+    // 상태는 클라이언트가 지정할 수 없다. 열림 시점 규칙에서만 결정된다.
+    status: opening.status,
+    createdAt: now,
+    isMine: true
   };
 
   await env.DB.prepare(
     `INSERT INTO sogon_files
-      (id, room_id, author_member_id, tags_json, content, sensitivity, opening_time, recommendation_on, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (id, room_id, author_member_id, tags_json, content, sensitivity, opening_time, opening_at,
+       recommendation_on, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     file.id,
     member.room_id,
@@ -99,6 +130,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     file.content,
     file.sensitivity,
     file.openingTime,
+    file.openingAt,
     file.recommendationOn ? 1 : 0,
     file.status,
     now,
@@ -106,4 +138,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   ).run();
 
   return json({ file }, { status: 201 });
-};
+});

@@ -1,1 +1,1 @@
-export { onRequestGet } from '../../../BE/functions/api/auth/me';
+export { onRequestGet, onRequestDelete } from '../../../BE/functions/api/auth/me';

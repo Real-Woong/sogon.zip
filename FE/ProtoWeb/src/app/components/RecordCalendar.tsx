@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSogonFiles } from '../lib/sogonStore';
@@ -21,7 +20,6 @@ function toDateLabel(date: Date) {
 }
 
 export function RecordCalendar() {
-  const navigate = useNavigate();
   const openedFiles = getSogonFiles().filter(file => file.status === 'opened');
   const events = openedFiles.reduce<Record<string, RecordEvent>>((acc, file) => {
     const date = new Date(file.createdAt);
@@ -125,7 +123,9 @@ export function RecordCalendar() {
         {/* Selected event */}
         <div className="bg-gradient-to-br from-[color:var(--yellow)]/20 to-white rounded-3xl p-6 border-2 border-[color:var(--yellow)]/50 shadow-lg">
           <div className="text-center mb-4">
-            <p className="text-sm text-[color:var(--gray)] mb-1">{selectedEvent?.dday ?? '기록 없음'}</p>
+            <p className="text-sm text-[color:var(--gray)] mb-1">
+              {selectedEvent ? selectedEvent.dateLabel : '기록 없음'}
+            </p>
             <h3 className="text-lg font-bold text-[color:var(--navy)]">
               {selectedEvent?.title ?? '이 날짜에는 열린 소곤.zip이 없어요'}
             </h3>

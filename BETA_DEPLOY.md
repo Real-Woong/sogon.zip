@@ -19,10 +19,25 @@ TestFlight는 정식 iOS 베타 배포에는 좋지만 Apple Developer Program �
 
 ```bash
 yarn install
-yarn build
+yarn verify   # typecheck + P0 회귀 테스트 + build
 ```
 
 빌드 결과물은 `dist/` 폴더에 생성된다.
+
+## D1 마이그레이션 (배포 전 필수)
+
+D1 데이터베이스에 아래 순서로 한 번씩 실행한다.
+
+```bash
+wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0001_beta_schema.sql
+wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
+```
+
+`0002`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
+
+`0002` 적용 후 기존 로그인 세션은 모두 무효가 된다. 이미 가입한 친구가 있다면
+다시 로그인해달라고 알려준다. 비밀번호는 그대로 쓸 수 있고, 로그인하는 순간
+서버가 자동으로 최신 해싱으로 옮긴다.
 
 ## Cloudflare Pages 설정값
 
@@ -77,21 +92,45 @@ Build output directory: dist
 
 11. 배포가 끝나면 `https://프로젝트이름.pages.dev` 주소가 생긴다.
 
-12. 친구들에게 아래 정보를 보낸다.
+12. ⚠️ **도메인이 정해진 직후 딱 한 번** 루트 `index.html`의 링크 미리보기 주소를
+    절대 URL로 바꾼다. 상대 경로(`/og-image.png`)도 카카오톡에서는 대체로 동작하지만,
+    크롤러에 따라 썸네일이 안 뜬다. 카톡으로 퍼뜨릴 서비스라면 여기서 확실히 해두는 게 낫다.
+
+```html
+<!-- index.html - 프로젝트이름 자리를 실제 주소로 -->
+<meta property="og:url" content="https://프로젝트이름.pages.dev/" />
+<meta property="og:image" content="https://프로젝트이름.pages.dev/og-image.png" />
+<meta name="twitter:image" content="https://프로젝트이름.pages.dev/og-image.png" />
+```
+
+    바꾼 뒤 카카오 [디버거](https://developers.kakao.com/tool/debugger/sharing)에서
+    `초기화`를 눌러야 캐시된 옛 미리보기가 갱신된다.
+
+13. 친구들에게 아래 정보를 보낸다.
 
 ```text
 Sogon.zip 베타 테스트 링크:
 https://프로젝트이름.pages.dev
 
 테스트해볼 것:
-1. 회원가입
+1. 회원가입 (비밀번호 8자 이상)
 2. 내 계정 코드 확인하기
 3. 상대의 계정 코드로 내 사람 찾기
-4. 맞는 사람인지 확인하고 연결하기
-5. 내 소곤.zip 만들기
-6. 오늘의 추천 압축해제
+4. 연결 요청 보내기 -> 상대가 수락하기
+5. 내 소곤.zip 만들기 ('직접 날짜 선택'으로 날짜도 골라보기)
+6. 열릴 날짜가 지난 파일이 '열 준비됨' 탭으로 올라오는지
 7. 기록 달력
+8. 소곤.zip 지우기
+9. MY 화면에서 로그아웃 / 연결 해제 / 회원 탈퇴
 ```
+
+## 연결 동작 확인 (중요)
+
+친구 3명으로 아래를 꼭 확인한다.
+
+- A가 B에게 요청 -> B가 수락해야만 연결된다. B가 수락하기 전에는 서로의 소곤파일이 보이지 않는다.
+- A와 B가 연결된 뒤, C가 A의 계정 코드로 요청하면 "이미 다른 사람과 연결되어 있어요"로 막혀야 한다.
+- A가 아직 열지 않은 소곤파일은 B의 화면 어디에도 나타나지 않아야 한다.
 
 ## 친구들에게 같이 물어볼 피드백
 
@@ -103,15 +142,28 @@ https://프로젝트이름.pages.dev
 
 ## 지금 베타의 한계
 
-- 데이터는 각 친구의 브라우저 `localStorage`에만 저장된다.
-- 아직 실제 회원가입, 서버 로그인, 친구 간 실시간 공유 DB는 없다.
-- 친구 3명이 같은 데이터를 같이 보는 구조는 아직 아니다.
+- 이메일 인증과 비밀번호 재설정이 없다. 비밀번호를 잊으면 복구할 방법이 없다.
+- 연결 해제와 탈퇴는 즉시 삭제라 되돌릴 수 없고, 내보내기 기능도 아직 없다.
+- 세션은 30일이면 만료된다(쓰는 동안에는 자동 연장).
+- 추천 기능은 아직 자리만 잡혀 있고 실제 추천 로직이 없다.
+- 알림이 없어서, 소곤파일이 열릴 날이 와도 앱을 직접 열어야 알 수 있다.
 - `DB-DEMO/`는 나중에 서버 DB로 옮기기 위한 시연용 SQL이다.
+
+## 배포 후 꼭 확인할 것
+
+`/api/*`가 실제로 Functions로 라우팅되는지 먼저 확인한다.
+
+```bash
+curl -i https://프로젝트이름.pages.dev/api/auth/me
+```
+
+`content-type: application/json`과 401이 나와야 정상이다. `text/html`이 나오면
+Functions가 붙지 않았다는 뜻이고(SPA fallback이 index.html을 돌려준 것), 루트
+`functions/` 어댑터나 D1 바인딩을 다시 확인해야 한다.
 
 ## 다음 단계
 
 1. 베타 피드백 수집
-2. Supabase, Cloudflare D1, Firebase 중 하나로 원격 DB 연결
-3. 실제 회원가입/로그인 추가
+2. 규칙 기반 추천 v1
 4. Expo 앱에 웹 프로토타입 핵심 화면 이식
 5. Apple Developer Program 가입 후 TestFlight 또는 App Store 배포

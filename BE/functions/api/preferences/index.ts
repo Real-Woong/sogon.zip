@@ -1,4 +1,4 @@
-import { all, Env, json, newId, readJson, requireMember } from '../_shared';
+import { all, Env, handle, json, newId, readJson, requireMember } from '../_shared';
 
 type PreferenceRow = {
   id: string;
@@ -21,7 +21,7 @@ function toPreference(row: PreferenceRow) {
   };
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) => {
   const member = await requireMember(request, env);
 
   if (!member.room_id) {
@@ -36,9 +36,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   ).bind(member.room_id));
 
   return json({ preferences: rows.map(toPreference) });
-};
+});
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env }) => {
   const member = await requireMember(request, env);
 
   if (!member.room_id) {
@@ -66,4 +66,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   ).bind(preference.id, member.room_id, member.id, category, text, now).run();
 
   return json({ preference }, { status: 201 });
-};
+});

@@ -1,1 +1,1 @@
-export { onRequestPatch } from '../../../BE/functions/api/files/[id]';
+export { onRequestPatch, onRequestDelete } from '../../../BE/functions/api/files/[id]';

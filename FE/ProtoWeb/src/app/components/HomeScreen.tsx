@@ -2,15 +2,25 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import { ZipBadge } from './shared/ZipBadge';
-import { ChevronRight, Sparkles, Calendar as CalendarIcon, FolderOpen, Heart, Plus } from 'lucide-react';
-import { getProfile, getSogonFiles, getUserPreferences, syncRemoteData } from '../lib/sogonStore';
+import { ChevronRight, Sparkles, Calendar as CalendarIcon, FolderOpen, Heart, Plus, UserPlus } from 'lucide-react';
+import {
+  getConnectionRequests,
+  getProfile,
+  getSogonFiles,
+  getUserPreferences,
+  syncRemoteData,
+  type ConnectionRequest
+} from '../lib/sogonStore';
 
 export function HomeScreen() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(() => getProfile());
   const [files, setFiles] = useState(() => getSogonFiles());
   const [preferences, setPreferences] = useState(() => getUserPreferences());
-  const upcomingCount = files.filter(file => file.status === 'scheduled' || file.status === 'ready').length;
+  const [incomingRequests, setIncomingRequests] = useState<ConnectionRequest[]>([]);
+  const myFiles = files.filter(file => file.isMine !== false);
+  const upcomingCount = myFiles.filter(file => file.status === 'scheduled').length;
+  const readyCount = myFiles.filter(file => file.status === 'ready').length;
   const openedCount = files.filter(file => file.status === 'opened').length;
   const preferenceProgress = Math.min(100, preferences.length * 20);
   const coupleLabel = profile?.partnerNickname
@@ -25,11 +35,35 @@ export function HomeScreen() {
         setPreferences(getUserPreferences());
       })
       .catch(() => undefined);
+
+    getConnectionRequests()
+      .then(data => setIncomingRequests(data.incoming ?? []))
+      .catch(() => undefined);
   }, []);
 
   return (
     <div className="h-full flex flex-col bg-[linear-gradient(180deg,#fffafa_0%,#fff4f7_44%,#f4f0ff_100%)]">
       <div className="px-6 pt-7 pb-5">
+        {incomingRequests.length > 0 ? (
+          <button
+            onClick={() => navigate('/create-room')}
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-[color:var(--pink)]/60"
+          >
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-[color:var(--navy)]">
+                {incomingRequests[0].person.nickname}님이 연결을 요청했어요
+              </p>
+              <p className="mt-0.5 text-xs text-[color:var(--gray)]">
+                수락해야 둘만의 소곤폴더가 열려요.
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+          </button>
+        ) : null}
+
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-[color:var(--coral-deep)]">D+87</p>
@@ -114,7 +148,11 @@ export function HomeScreen() {
             <ChevronRight className="w-5 h-5 text-[color:var(--gray)]" />
           </div>
           <p className="text-sm text-[color:var(--gray)] mb-4">
-            {upcomingCount > 0 ? `압축해제 예정 ${upcomingCount}개가 있어요.` : '아직 예정된 소곤.zip이 없어요.'}
+            {readyCount > 0
+              ? `지금 열 수 있는 소곤.zip ${readyCount}개가 있어요.`
+              : upcomingCount > 0
+              ? `압축해제 예정 ${upcomingCount}개가 있어요.`
+              : '아직 예정된 소곤.zip이 없어요.'}
           </p>
           <button className="sogon-soft-button w-full font-bold transition-colors hover:bg-[color:var(--lavender-light)]">
             확인하기

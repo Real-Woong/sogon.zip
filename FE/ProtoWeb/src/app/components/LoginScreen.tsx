@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { ArrowRight, Heart, LockKeyhole, UserRound } from 'lucide-react';
 import { signInBetaUser } from '../lib/sogonStore';
+import { useSession } from '../lib/session';
 
 export function LoginScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { setSession } = useSession();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 가드에 막혀서 여기로 온 경우, 로그인 후 원래 가려던 곳으로 보낸다.
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/home';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -17,8 +23,9 @@ export function LoginScreen() {
     setError('');
 
     try {
-      await signInBetaUser(id, password);
-      navigate('/home');
+      const profile = await signInBetaUser(id, password);
+      setSession(profile);
+      navigate(redirectTo, { replace: true });
       return;
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '아이디 또는 비밀번호를 다시 확인해주세요.');
@@ -29,17 +36,17 @@ export function LoginScreen() {
 
   return (
     <div className="h-full flex flex-col px-7 py-8 bg-[radial-gradient(circle_at_20%_12%,#ffe1e9_0%,transparent_35%),radial-gradient(circle_at_88%_4%,#ece5ff_0%,transparent_32%),linear-gradient(180deg,#fffafa_0%,#fff4f7_52%,#f8f1ff_100%)]">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-sm font-semibold text-[color:var(--coral-deep)] shadow-sm ring-1 ring-white">
-          <Heart className="h-4 w-4 fill-current" />
-          Sogon.zip beta
+          <img src="/logo.svg" alt="Sogon.zip" className="h-6 w-auto" />
+          <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--coral-deep)]">beta</span>
         </div>
-        <div className="h-11 w-11 rounded-full bg-white/80 shadow-sm ring-1 ring-white" />
       </div>
 
       <div className="mt-14">
         <p className="text-sm font-bold text-[color:var(--coral-deep)]">둘만의 소곤방</p>
-        <h1 className="mt-2 text-[2.35rem] font-black leading-tight text-[color:var(--navy)]">
+        {/* break-keep이 없으면 한글이 단어 중간에서 잘려 '요' 한 글자가 다음 줄로 떨어진다. */}
+        <h1 className="mt-2 text-[2.1rem] font-black leading-tight break-keep text-[color:var(--navy)]">
           로그인하고<br />우리 기록을 열어봐요
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-[color:var(--gray)]">

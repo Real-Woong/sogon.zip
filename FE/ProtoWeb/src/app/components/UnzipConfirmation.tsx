@@ -1,21 +1,40 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronLeft, Lock } from 'lucide-react';
-import { getSogonFiles, updateSogonFile } from '../lib/sogonStore';
+import { getMySogonFiles, updateSogonFile } from '../lib/sogonStore';
+import { isOpenable } from '../../../../../shared/sogonOpening';
 
 export function UnzipConfirmation() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [message, setMessage] = useState('');
-  const file = getSogonFiles().find(sogonFile => sogonFile.status === 'ready');
+  const [error, setError] = useState('');
+  const [isOpening, setIsOpening] = useState(false);
 
-  const openFile = () => {
+  // 내 파일 중에서만 고른다. 목록에서 고른 파일이 있으면 그 파일을, 없으면
+  // 지금 열 수 있는 첫 파일을 연다.
+  const myFiles = getMySogonFiles();
+  const requestedId = searchParams.get('file');
+  const file = requestedId
+    ? myFiles.find(sogonFile => sogonFile.id === requestedId)
+    : myFiles.find(sogonFile => isOpenable(sogonFile));
+
+  const openFile = async () => {
     if (!file) {
       navigate('/my-folder');
       return;
     }
 
-    updateSogonFile(file.id, { status: 'opened' });
-    navigate('/record');
+    setIsOpening(true);
+    setError('');
+
+    try {
+      await updateSogonFile(file.id, { status: 'opened' });
+      navigate('/record');
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '열지 못했어요.');
+      setIsOpening(false);
+    }
   };
 
   return (
@@ -92,11 +111,17 @@ export function UnzipConfirmation() {
 
       {/* Actions */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)] space-y-3">
+        {error ? (
+          <p className="rounded-2xl bg-[color:var(--blush)]/60 px-4 py-3 text-sm font-semibold text-[color:var(--coral-deep)]">
+            {error}
+          </p>
+        ) : null}
         <button
           onClick={openFile}
-          className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors"
+          disabled={isOpening}
+          className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors disabled:opacity-50"
         >
-          {file ? '소곤.zip 압축해제' : '내 소곤폴더로 가기'}
+          {file ? (isOpening ? '여는 중...' : '소곤.zip 압축해제') : '내 소곤폴더로 가기'}
         </button>
         {file ? (
           <button

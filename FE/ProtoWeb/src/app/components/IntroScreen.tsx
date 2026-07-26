@@ -4,7 +4,7 @@ import { ArrowRight, CalendarHeart, Heart, MessageCircle, Sparkles, Tags } from 
 
 const onboardingSlides = [
   {
-    eyebrow: 'Sogon.zip',
+    eyebrow: '소곤.zip',
     title: '우리 둘 취향을\n조금씩 모아요',
     description: '말하기 애매한 마음과 좋아하는 것을 저장하면, 둘에게 맞는 추천이 더 쉬워져요.',
     accent: 'coral',
@@ -69,8 +69,8 @@ export function IntroScreen() {
 
       <div className="relative z-10 flex items-center justify-between">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-sm font-semibold text-[color:var(--coral-deep)] shadow-sm ring-1 ring-white">
-          <Heart className="h-4 w-4 fill-current" />
-          Sogon.zip beta
+          <img src="/logo.svg" alt="Sogon.zip" className="h-6 w-auto" />
+          <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--coral-deep)]">beta</span>
         </div>
         <button
           type="button"
@@ -212,13 +212,14 @@ function SlideMockup({ index }: { index: number }) {
 
   return (
     <div className="relative h-[292px] w-full">
-      <div className="absolute left-0 top-7 w-[198px] rounded-[2rem] bg-white p-4 shadow-[0_18px_45px_rgba(223,100,127,0.18)] ring-1 ring-white">
+      {/* 오른쪽 카드와 겹치는 폭이라 예전에는 'LOVE SIGNAL' 라벨이 잘렸다. 폭을 줄여 겹침만 남긴다. */}
+      <div className="absolute left-0 top-9 w-[172px] rounded-[2rem] bg-white p-4 shadow-[0_18px_45px_rgba(223,100,127,0.18)] ring-1 ring-white">
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
             <Heart className="h-6 w-6 fill-current" />
           </div>
           <div>
-            <p className="text-[0.68rem] font-semibold text-[color:var(--gray)]">LOVE SIGNAL</p>
+            <p className="text-[0.68rem] font-semibold text-[color:var(--gray)]">함께한 날</p>
             <p className="text-lg font-bold text-[color:var(--navy)]">D+87</p>
           </div>
         </div>

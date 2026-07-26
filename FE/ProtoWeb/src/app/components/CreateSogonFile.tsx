@@ -1,27 +1,34 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
-import { createSogonFile, saveSogonFile } from '../lib/sogonStore';
+import { saveSogonFile } from '../lib/sogonStore';
+import {
+  CUSTOM_DATE_LABEL,
+  DEFAULT_OPENING_LABEL,
+  findOpeningOption,
+  OPENING_OPTIONS
+} from '../../../../../shared/sogonOpening';
+
+function todayInputValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
 
 export function CreateSogonFile() {
   const navigate = useNavigate();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [content, setContent] = useState('');
   const [sensitivity, setSensitivity] = useState(2);
-  const [openingTime, setOpeningTime] = useState('내가 직접 열게요');
+  const [openingTime, setOpeningTime] = useState(DEFAULT_OPENING_LABEL);
+  const [customDate, setCustomDate] = useState('');
   const [recommendationOn, setRecommendationOn] = useState(true);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const tags = ['음식', '알레르기', '카페', '데이트 취향', '취미', '선물', '비밀', '직접 추가'];
   const sensitivities = ['😄', '😀', '🙂', '🙁', '😣'];
-  const openingOptions = [
-    '지금 알려도 좋아요',
-    '100일 후',
-    '200일 후',
-    '1년 후',
-    '직접 날짜 선택',
-    '내가 직접 열게요',
-    '열고 싶지 않아요'
-  ];
+  const needsCustomDate = openingTime === CUSTOM_DATE_LABEL;
+  const canSave = Boolean(content.trim()) && (!needsCustomDate || Boolean(customDate)) && !isSaving;
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -29,21 +36,28 @@ export function CreateSogonFile() {
     );
   };
 
-  const handleSave = () => {
-    if (!content.trim()) {
+  const handleSave = async () => {
+    if (!canSave) {
       return;
     }
 
-    const file = createSogonFile({
-      tags: selectedTags.length > 0 ? selectedTags : ['기타'],
-      content: content.trim(),
-      sensitivity: sensitivities[sensitivity],
-      openingTime,
-      recommendationOn
-    });
+    setIsSaving(true);
+    setError('');
 
-    saveSogonFile(file);
-    navigate('/my-folder');
+    try {
+      await saveSogonFile({
+        tags: selectedTags.length > 0 ? selectedTags : ['기타'],
+        content: content.trim(),
+        sensitivity: sensitivities[sensitivity],
+        openingTime,
+        openingAt: needsCustomDate ? customDate : null,
+        recommendationOn
+      });
+      navigate('/my-folder');
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '저장하지 못했어요.');
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -133,13 +147,33 @@ export function CreateSogonFile() {
           </label>
           <select
             value={openingTime}
-            onChange={(e) => setOpeningTime(e.target.value)}
+            onChange={(e) => {
+              setOpeningTime(e.target.value);
+              setError('');
+            }}
             className="w-full px-4 py-3 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
           >
-            {openingOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
+            {OPENING_OPTIONS.map(option => (
+              <option key={option.label} value={option.label}>{option.label}</option>
             ))}
           </select>
+
+          {needsCustomDate ? (
+            <input
+              type="date"
+              value={customDate}
+              min={todayInputValue()}
+              onChange={(e) => {
+                setCustomDate(e.target.value);
+                setError('');
+              }}
+              className="mt-3 w-full px-4 py-3 bg-white rounded-xl border border-[color:var(--border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--lavender)] text-[color:var(--navy)]"
+            />
+          ) : null}
+
+          <p className="mt-2 text-xs text-[color:var(--gray)]">
+            {findOpeningOption(openingTime)?.hint}
+          </p>
         </div>
 
         {/* Recommendation reflection */}
@@ -168,13 +202,18 @@ export function CreateSogonFile() {
       </div>
 
       {/* Save button */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)]">
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)] space-y-3">
+        {error ? (
+          <p className="rounded-2xl bg-[color:var(--blush)]/60 px-4 py-3 text-sm font-semibold text-[color:var(--coral-deep)]">
+            {error}
+          </p>
+        ) : null}
         <button
           onClick={handleSave}
-          disabled={!content.trim()}
+          disabled={!canSave}
           className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          소곤.zip으로 압축하기
+          {isSaving ? '압축하는 중...' : '소곤.zip으로 압축하기'}
         </button>
       </div>
     </div>
