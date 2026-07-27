@@ -14,8 +14,8 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 rounded-t-[2rem] border-t border-white/70 bg-white/88 px-4 py-2 shadow-[0_-14px_35px_rgba(77,61,91,0.12)] backdrop-blur-xl">
-      <div className="flex justify-around items-center">
+    <nav className="absolute bottom-0 left-0 right-0 z-10 rounded-t-[2rem] border-t border-white/70 bg-white/88 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_35px_rgba(77,61,91,0.12)] backdrop-blur-xl sm:px-4">
+      <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -24,7 +24,7 @@ export function BottomNav() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex min-w-14 flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-colors ${
+              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 transition-colors sm:min-w-14 sm:flex-none sm:px-3 ${
                 isActive ? 'bg-[color:var(--blush)] text-[color:var(--coral-deep)]' : 'text-[color:var(--gray)] hover:bg-[color:var(--gray-light)]'
               }`}
             >

@@ -26,14 +26,14 @@ export function SogonFileCard({
 
   return (
     <div className={`${bgColor} rounded-2xl p-4 border border-[color:var(--border)] shadow-sm`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">📄</span>
-          <h3 className="font-medium text-[color:var(--navy)]">{title}</h3>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-lg">📄</span>
+          <h3 className="min-w-0 break-words font-medium text-[color:var(--navy)]">{title}</h3>
           <ZipBadge />
         </div>
-        {status === 'locked' && <Lock className="w-4 h-4 text-[color:var(--gray)]" />}
-        {status === 'opened' && <Gift className="w-4 h-4 text-[color:var(--lavender)]" />}
+        {status === 'locked' && <Lock className="h-4 w-4 shrink-0 text-[color:var(--gray)]" />}
+        {status === 'opened' && <Gift className="h-4 w-4 shrink-0 text-[color:var(--lavender)]" />}
       </div>
 
       <div className="space-y-1.5 text-sm text-[color:var(--gray)]">

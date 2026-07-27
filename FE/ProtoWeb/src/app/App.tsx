@@ -17,8 +17,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <SessionProvider>
-        <div className="min-h-screen w-full flex items-center justify-center bg-[linear-gradient(135deg,#fff7f7_0%,#f2ecff_45%,#e7fbf3_100%)] p-4">
-          <div className="relative w-full max-w-[414px] h-[min(896px,calc(100vh-2rem))] min-h-[680px] bg-[color:var(--cream)] overflow-hidden rounded-[2.5rem] shadow-[0_30px_80px_rgba(77,61,91,0.24)] ring-1 ring-white/70">
+        <div className="flex h-dvh min-h-0 w-full items-center justify-center bg-[linear-gradient(135deg,#fff7f7_0%,#f2ecff_45%,#e7fbf3_100%)] sm:p-4">
+          <div className="relative h-full min-h-0 w-full max-w-[414px] overflow-hidden bg-[color:var(--cream)] sm:h-[min(896px,calc(100dvh-2rem))] sm:min-h-[680px] sm:rounded-[2.5rem] sm:shadow-[0_30px_80px_rgba(77,61,91,0.24)] sm:ring-1 sm:ring-white/70">
             <Routes>
               {/* 로그인 없이 볼 수 있는 화면 */}
               <Route path="/" element={<IntroScreen />} />

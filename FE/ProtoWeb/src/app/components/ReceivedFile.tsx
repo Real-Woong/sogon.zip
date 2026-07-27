@@ -17,7 +17,7 @@ export function ReceivedFile() {
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
       {/* Header */}
-      <div className="grid grid-cols-[44px_1fr_44px] items-center px-6 py-6 border-b border-[color:var(--border)] bg-white">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center border-b border-[color:var(--border)] bg-white px-4 py-4 sm:px-6 sm:py-6">
         <button
           type="button"
           aria-label="홈으로 돌아가기"
@@ -26,7 +26,7 @@ export function ReceivedFile() {
         >
           <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
         </button>
-        <h1 className="text-center text-xl font-bold text-[color:var(--navy)]">
+        <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
           받은 소곤.zip
         </h1>
         <div />
@@ -36,12 +36,12 @@ export function ReceivedFile() {
       {receivedFile ? (
         <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 pb-32">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-[color:var(--navy)] mb-2">
+          <h2 className="mb-2 break-keep text-xl font-bold leading-tight text-[color:var(--navy)]">
             {receivedFile.sender}의 소곤.zip이 도착했어요
           </h2>
-          <div className="inline-flex items-center gap-2 bg-[color:var(--pink)]/20 px-4 py-2 rounded-full">
-            <Heart className="w-4 h-4 text-[color:var(--pink)]" fill="currentColor" />
-            <p className="text-sm text-[color:var(--navy)]">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-2xl bg-[color:var(--pink)]/20 px-4 py-2">
+            <Heart className="h-4 w-4 shrink-0 text-[color:var(--pink)]" fill="currentColor" />
+            <p className="min-w-0 break-words text-left text-sm text-[color:var(--navy)]">
               {receivedFile.message}
             </p>
           </div>
@@ -71,14 +71,14 @@ export function ReceivedFile() {
               <button
                 key={reaction.label}
                 onClick={() => setSelectedReaction(reaction.label)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+              className={`flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 p-3 transition-all sm:p-4 ${
                   selectedReaction === reaction.label
                     ? 'bg-[color:var(--lavender)]/10 border-[color:var(--lavender)]'
                     : 'bg-white border-[color:var(--border)]'
                 }`}
               >
                 <span className="text-3xl">{reaction.emoji}</span>
-                <span className="text-xs text-center text-[color:var(--navy)]">
+                <span className="break-keep text-center text-xs leading-snug text-[color:var(--navy)]">
                   {reaction.label}
                 </span>
               </button>
@@ -101,7 +101,7 @@ export function ReceivedFile() {
       )}
 
       {/* Bottom button */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)]">
+      <div className="absolute bottom-0 left-0 right-0 border-t border-[color:var(--border)] bg-white px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
         <button
           onClick={() => navigate('/record')}
           className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors"

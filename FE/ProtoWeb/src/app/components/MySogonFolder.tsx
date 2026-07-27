@@ -188,7 +188,7 @@ export function MySogonFolder() {
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
       {/* Header */}
       <div className="bg-white border-b border-[color:var(--border)]">
-        <div className="grid grid-cols-[44px_1fr_44px] items-center px-6 py-6">
+        <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center px-4 py-4 sm:px-6 sm:py-6">
           <button
             type="button"
             aria-label="홈으로 돌아가기"
@@ -197,7 +197,7 @@ export function MySogonFolder() {
           >
             <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
           </button>
-          <h1 className="text-center text-xl font-bold text-[color:var(--navy)]">
+          <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
             내 소곤폴더
           </h1>
           <div />
@@ -241,7 +241,7 @@ export function MySogonFolder() {
 
       {deletingFile && (
         <div className="absolute inset-0 z-20 flex items-end bg-[rgba(45,39,56,0.28)]">
-          <div className="w-full rounded-t-[2rem] bg-white p-6 shadow-[0_-18px_40px_rgba(45,39,56,0.18)]">
+          <div className="max-h-[calc(100%-1rem)] w-full overflow-y-auto rounded-t-[2rem] bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-18px_40px_rgba(45,39,56,0.18)]">
             <h2 className="text-lg font-black text-[color:var(--navy)]">
               이 소곤.zip을 지울까요?
             </h2>
@@ -286,7 +286,7 @@ export function MySogonFolder() {
 
       {(editingFile || timingFile) && (
         <div className="absolute inset-0 z-20 flex items-end bg-[rgba(45,39,56,0.28)]">
-          <div className="w-full rounded-t-[2rem] bg-white p-6 shadow-[0_-18px_40px_rgba(45,39,56,0.18)]">
+          <div className="max-h-[calc(100%-1rem)] w-full overflow-y-auto rounded-t-[2rem] bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-18px_40px_rgba(45,39,56,0.18)]">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-black text-[color:var(--navy)]">
                 {editingFile ? '소곤.zip 수정' : '열리는 시점 변경'}

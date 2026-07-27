@@ -63,7 +63,7 @@ export function CreateSogonFile() {
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
       {/* Header */}
-      <div className="grid grid-cols-[44px_1fr_44px] items-center px-6 py-6 border-b border-[color:var(--border)] bg-white">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center border-b border-[color:var(--border)] bg-white px-4 py-4 sm:px-6 sm:py-6">
         <button
           type="button"
           aria-label="홈으로 돌아가기"
@@ -72,7 +72,7 @@ export function CreateSogonFile() {
         >
           <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
         </button>
-        <h1 className="text-center text-xl font-bold text-[color:var(--navy)]">
+        <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
           새 소곤.zip 압축하기
         </h1>
         <div />
@@ -178,8 +178,8 @@ export function CreateSogonFile() {
 
         {/* Recommendation reflection */}
         <div className="bg-white rounded-xl p-4 border border-[color:var(--border)]">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <p className="font-medium text-[color:var(--navy)] mb-1">추천에 반영하기</p>
               <p className="text-xs text-[color:var(--gray)]">
                 상대에게 열리기 전에도, 추천에는 조심스럽게 반영돼요.
@@ -187,7 +187,9 @@ export function CreateSogonFile() {
             </div>
             <button
               onClick={() => setRecommendationOn(!recommendationOn)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
+              aria-label="추천 반영 여부"
+              aria-pressed={recommendationOn}
+              className={`relative h-6 w-12 shrink-0 rounded-full transition-colors ${
                 recommendationOn ? 'bg-[color:var(--lavender)]' : 'bg-[color:var(--gray-light)]'
               }`}
             >
@@ -202,7 +204,7 @@ export function CreateSogonFile() {
       </div>
 
       {/* Save button */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)] space-y-3">
+      <div className="absolute bottom-0 left-0 right-0 space-y-3 border-t border-[color:var(--border)] bg-white px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
         {error ? (
           <p className="rounded-2xl bg-[color:var(--blush)]/60 px-4 py-3 text-sm font-semibold text-[color:var(--coral-deep)]">
             {error}

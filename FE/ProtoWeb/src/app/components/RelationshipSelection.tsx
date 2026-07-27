@@ -5,7 +5,7 @@ export function RelationshipSelection() {
   const navigate = useNavigate();
 
   return (
-    <div className="h-full flex flex-col px-6 py-10 bg-[linear-gradient(180deg,#fffafa_0%,#fff3f6_58%,#f4f0ff_100%)]">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-[linear-gradient(180deg,#fffafa_0%,#fff3f6_58%,#f4f0ff_100%)] px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] [@media(max-height:720px)]:pt-6">
       <div className="mb-8">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-xs font-bold text-[color:var(--coral-deep)] shadow-sm">
           <Sparkles className="h-4 w-4" />
@@ -19,16 +19,16 @@ export function RelationshipSelection() {
         </p>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 pt-8 pb-14">
+      <div className="flex flex-1 flex-col gap-4 pb-4 pt-8 [@media(max-height:720px)]:pt-2">
         <button
           onClick={() => navigate('/create-room')}
-          className="sogon-choice-card group overflow-hidden p-6 text-left ring-1 ring-[color:var(--pink)]/60 transition-all hover:-translate-y-1 hover:ring-[color:var(--coral)]"
+          className="sogon-choice-card group overflow-hidden p-6 text-left ring-1 ring-[color:var(--pink)]/60 transition-all hover:-translate-y-1 hover:ring-[color:var(--coral)] [@media(max-width:350px)]:p-4"
         >
           <div className="flex items-start gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
               <Heart className="h-8 w-8 fill-current" />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="rounded-full bg-[color:var(--coral)]/10 px-3 py-1 text-xs font-bold text-[color:var(--coral-deep)]">추천</span>
                 <ArrowRight className="h-5 w-5 text-[color:var(--coral-deep)] transition-transform group-hover:translate-x-1" />
@@ -45,13 +45,13 @@ export function RelationshipSelection() {
 
         <button
           onClick={() => navigate('/create-room')}
-          className="sogon-choice-card group p-6 text-left ring-1 ring-white transition-all hover:bg-white hover:ring-[color:var(--mint)]"
+          className="sogon-choice-card group p-6 text-left ring-1 ring-white transition-all hover:bg-white hover:ring-[color:var(--mint)] [@media(max-width:350px)]:p-4"
         >
           <div className="flex items-start gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-[color:var(--mint)]/55 text-[color:var(--navy)]">
               <Users className="h-8 w-8" strokeWidth={2.5} />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="mb-2 flex justify-end">
                 <ArrowRight className="h-5 w-5 text-[color:var(--gray)] transition-transform group-hover:translate-x-1" />
               </div>

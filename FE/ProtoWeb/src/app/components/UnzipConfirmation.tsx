@@ -40,7 +40,7 @@ export function UnzipConfirmation() {
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
       {/* Header */}
-      <div className="grid grid-cols-[44px_1fr_44px] items-center px-6 py-6 border-b border-[color:var(--border)] bg-white">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center border-b border-[color:var(--border)] bg-white px-4 py-4 sm:px-6 sm:py-6">
         <button
           type="button"
           aria-label="내 소곤폴더로 돌아가기"
@@ -49,7 +49,7 @@ export function UnzipConfirmation() {
         >
           <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
         </button>
-        <h1 className="text-center text-xl font-bold text-[color:var(--navy)]">
+        <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
           내 소곤.zip 압축해제
         </h1>
         <div />
@@ -58,7 +58,7 @@ export function UnzipConfirmation() {
       {file ? (
         <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 pb-32">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-[color:var(--navy)] mb-2">
+          <h2 className="mb-2 break-keep text-xl font-bold leading-tight text-[color:var(--navy)]">
             오늘 압축해제할 소곤.zip이 있어요
           </h2>
           <p className="text-sm text-[color:var(--gray)]">
@@ -80,8 +80,8 @@ export function UnzipConfirmation() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-[color:var(--gray)]">
-            <Lock className="w-4 h-4" />
+          <div className="flex items-start gap-2 text-sm text-[color:var(--gray)]">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
             <span>열기 전까지 상대는 이 내용을 볼 수 없어요</span>
           </div>
         </div>
@@ -110,7 +110,7 @@ export function UnzipConfirmation() {
       )}
 
       {/* Actions */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-[color:var(--border)] space-y-3">
+      <div className="absolute bottom-0 left-0 right-0 space-y-3 border-t border-[color:var(--border)] bg-white px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
         {error ? (
           <p className="rounded-2xl bg-[color:var(--blush)]/60 px-4 py-3 text-sm font-semibold text-[color:var(--coral-deep)]">
             {error}

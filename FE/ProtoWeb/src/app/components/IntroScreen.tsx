@@ -64,7 +64,7 @@ export function IntroScreen() {
   };
 
   return (
-    <div className="h-full flex flex-col px-6 pt-7 pb-6 relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,#ffe1e9_0%,transparent_34%),radial-gradient(circle_at_88%_6%,#ece5ff_0%,transparent_32%),linear-gradient(180deg,#fffafa_0%,#fff4f7_52%,#f8f1ff_100%)]">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_20%_15%,#ffe1e9_0%,transparent_34%),radial-gradient(circle_at_88%_6%,#ece5ff_0%,transparent_32%),linear-gradient(180deg,#fffafa_0%,#fff4f7_52%,#f8f1ff_100%)] px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.75rem,env(safe-area-inset-top))] [@media(max-height:720px)]:pb-4 [@media(max-height:720px)]:pt-4">
       <div className="absolute inset-x-0 top-0 h-64 bg-[linear-gradient(135deg,rgba(245,138,163,0.18),rgba(169,150,232,0.16),rgba(189,235,220,0.16))]" />
 
       <div className="relative z-10 flex items-center justify-between">
@@ -84,17 +84,17 @@ export function IntroScreen() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative z-10 -mx-6 mt-6 flex flex-1 snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="relative z-10 -mx-6 mt-6 flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [@media(max-height:720px)]:mt-2 [&::-webkit-scrollbar]:hidden"
       >
         {onboardingSlides.map((slide, index) => (
           <section key={slide.eyebrow} className="flex min-w-full snap-center flex-col px-6">
-            <div className="relative mx-auto flex h-[330px] w-full items-center justify-center">
+            <div className="relative mx-auto flex h-[330px] w-full shrink-0 items-center justify-center [@media(max-height:720px)]:h-[235px]">
               <SlideMockup index={index} />
             </div>
 
-            <div className="mt-auto pb-4">
+            <div className="mt-auto pb-4 [@media(max-height:720px)]:pb-1">
               <p className="text-sm font-black text-[color:var(--coral-deep)]">{slide.eyebrow}</p>
-              <h1 className="mt-2 whitespace-pre-line text-[2.25rem] font-black leading-tight text-[color:var(--navy)]">
+              <h1 className="mt-2 whitespace-pre-line break-keep text-[2.25rem] font-black leading-tight text-[color:var(--navy)] [@media(max-height:720px)]:text-[1.8rem]">
                 {slide.title}
               </h1>
               <p className="mt-3 text-[0.95rem] leading-relaxed text-[color:var(--gray)]">
@@ -119,7 +119,7 @@ export function IntroScreen() {
         ))}
       </div>
 
-      <div className="relative z-10 mt-5 grid grid-cols-[1fr_auto] gap-3">
+      <div className="relative z-10 mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3 [@media(max-height:720px)]:mt-3">
         <button
           type="button"
           onClick={() => navigate('/relationship')}
@@ -130,7 +130,7 @@ export function IntroScreen() {
         <button
           type="button"
           onClick={goNext}
-          className="sogon-primary-button flex min-w-44 items-center justify-center gap-2 transition-transform hover:-translate-y-0.5"
+          className="sogon-primary-button flex min-w-36 items-center justify-center gap-2 transition-transform hover:-translate-y-0.5 sm:min-w-44"
         >
           {activeSlide === onboardingSlides.length - 1 ? '첫 질문 답하기' : '다음'}
           <ArrowRight className="h-5 w-5" />
@@ -143,7 +143,7 @@ export function IntroScreen() {
 function SlideMockup({ index }: { index: number }) {
   if (index === 1) {
     return (
-      <div className="relative h-[292px] w-full">
+      <div className="relative h-[292px] w-full [@media(max-height:720px)]:scale-[0.78]">
         <div className="absolute inset-x-3 top-7 rounded-[2rem] bg-white/88 p-5 shadow-[0_18px_45px_rgba(93,72,140,0.14)] ring-1 ring-white">
           <div className="mb-5 flex items-center justify-between">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--mint)]/65 text-[color:var(--navy)]">
@@ -168,7 +168,7 @@ function SlideMockup({ index }: { index: number }) {
 
   if (index === 2) {
     return (
-      <div className="relative h-[292px] w-full">
+      <div className="relative h-[292px] w-full [@media(max-height:720px)]:scale-[0.78]">
         <div className="absolute inset-x-4 top-5 rounded-[2rem] bg-white p-5 shadow-[0_18px_45px_rgba(223,100,127,0.16)] ring-1 ring-white">
           <div className="mb-5 flex items-center justify-between">
             <span className="rounded-full bg-[color:var(--yellow)]/70 px-3 py-1 text-xs font-black text-[color:var(--navy)]">오늘의 질문</span>
@@ -191,7 +191,7 @@ function SlideMockup({ index }: { index: number }) {
 
   if (index === 3) {
     return (
-      <div className="relative h-[292px] w-full">
+      <div className="relative h-[292px] w-full [@media(max-height:720px)]:scale-[0.78]">
         <div className="absolute left-3 right-3 top-6 rounded-[2rem] bg-[color:var(--navy)] p-5 text-white shadow-[0_20px_48px_rgba(45,39,56,0.24)]">
           <div className="mb-5 flex items-center justify-between">
             <span className="text-sm font-bold text-white/65">추천.zip</span>
@@ -211,7 +211,7 @@ function SlideMockup({ index }: { index: number }) {
   }
 
   return (
-    <div className="relative h-[292px] w-full">
+    <div className="relative h-[292px] w-full [@media(max-height:720px)]:scale-[0.78]">
       {/* 오른쪽 카드와 겹치는 폭이라 예전에는 'LOVE SIGNAL' 라벨이 잘렸다. 폭을 줄여 겹침만 남긴다. */}
       <div className="absolute left-0 top-9 w-[172px] rounded-[2rem] bg-white p-4 shadow-[0_18px_45px_rgba(223,100,127,0.18)] ring-1 ring-white">
         <div className="mb-5 flex items-center gap-3">

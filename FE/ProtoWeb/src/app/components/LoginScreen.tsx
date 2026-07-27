@@ -35,7 +35,7 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="h-full flex flex-col px-7 py-8 bg-[radial-gradient(circle_at_20%_12%,#ffe1e9_0%,transparent_35%),radial-gradient(circle_at_88%_4%,#ece5ff_0%,transparent_32%),linear-gradient(180deg,#fffafa_0%,#fff4f7_52%,#f8f1ff_100%)]">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-[radial-gradient(circle_at_20%_12%,#ffe1e9_0%,transparent_35%),radial-gradient(circle_at_88%_4%,#ece5ff_0%,transparent_32%),linear-gradient(180deg,#fffafa_0%,#fff4f7_52%,#f8f1ff_100%)] px-7 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="flex items-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-sm font-semibold text-[color:var(--coral-deep)] shadow-sm ring-1 ring-white">
           <img src="/logo.svg" alt="Sogon.zip" className="h-6 w-auto" />
@@ -43,7 +43,7 @@ export function LoginScreen() {
         </div>
       </div>
 
-      <div className="mt-14">
+      <div className="mt-14 [@media(max-height:720px)]:mt-8">
         <p className="text-sm font-bold text-[color:var(--coral-deep)]">둘만의 소곤방</p>
         {/* break-keep이 없으면 한글이 단어 중간에서 잘려 '요' 한 글자가 다음 줄로 떨어진다. */}
         <h1 className="mt-2 text-[2.1rem] font-black leading-tight break-keep text-[color:var(--navy)]">
@@ -54,7 +54,7 @@ export function LoginScreen() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-10 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-10 space-y-4 [@media(max-height:720px)]:mt-7">
         <label className="block">
           <span className="mb-2 block text-sm font-bold text-[color:var(--navy)]">아이디</span>
           <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-[color:var(--border)]">
@@ -104,7 +104,7 @@ export function LoginScreen() {
         </button>
       </form>
 
-      <div className="mt-auto rounded-[2rem] bg-white/72 p-5 shadow-sm ring-1 ring-white">
+      <div className="mt-8 rounded-[2rem] bg-white/72 p-5 shadow-sm ring-1 ring-white">
         <p className="text-xs font-bold text-[color:var(--gray)]">처음 시작하나요?</p>
         <p className="mt-2 text-sm leading-relaxed text-[color:var(--navy)]">
           아이디와 비밀번호를 만들면 내 계정 코드가 생겨요. 그 코드로 서로를 찾아 연결할 수 있어요.

@@ -126,7 +126,7 @@ export function RecordCalendar() {
             <p className="text-sm text-[color:var(--gray)] mb-1">
               {selectedEvent ? selectedEvent.dateLabel : '기록 없음'}
             </p>
-            <h3 className="text-lg font-bold text-[color:var(--navy)]">
+            <h3 className="break-keep text-lg font-bold leading-snug text-[color:var(--navy)]">
               {selectedEvent?.title ?? '이 날짜에는 열린 소곤.zip이 없어요'}
             </h3>
           </div>
@@ -137,7 +137,7 @@ export function RecordCalendar() {
                 <span className="text-lg">{selectedEvent.stamp}</span>
                 <p className="font-medium text-[color:var(--navy)]">{selectedEvent.file}이 열렸어요.</p>
               </div>
-              <p className="text-sm text-[color:var(--gray)] ml-7 mb-3 italic">
+              <p className="mb-3 ml-7 break-words text-sm italic text-[color:var(--gray)]">
                 "{selectedEvent.content}"
               </p>
             </div>

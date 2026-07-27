@@ -151,8 +151,8 @@ export function CreateJoinRoom() {
   };
 
   return (
-    <div className="h-full flex flex-col px-6 py-10">
-      <div className="mb-7 text-center">
+    <div className="flex h-full min-h-0 flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] [@media(max-height:720px)]:pt-5">
+      <div className="mb-7 shrink-0 text-center [@media(max-height:720px)]:mb-4">
         <p className="inline-flex items-center gap-1.5 text-sm font-bold text-[color:var(--coral-deep)]">
           <img src="/logo.svg" alt="Sogon.zip" className="h-7 w-auto" />
           <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--coral-deep)]">beta</span>
@@ -166,7 +166,7 @@ export function CreateJoinRoom() {
             ? '요청 보냄'
             : '내 사람 찾기'}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-[color:var(--gray)]">
+        <p className="mt-3 break-keep text-sm leading-relaxed text-[color:var(--gray)]">
           {step === 'signup'
             ? '아이디와 비밀번호를 만들고, 가입 후 상대의 계정 코드로 연결해요.'
             : '연결은 상대가 수락해야 완료돼요. 수락 전까지는 서로의 소곤파일이 보이지 않아요.'}
@@ -174,10 +174,10 @@ export function CreateJoinRoom() {
       </div>
 
       {step !== 'signup' ? (
-        <div className="mb-5 rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-white">
+        <div className="mb-5 shrink-0 rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-white">
           <p className="text-xs font-bold text-[color:var(--gray)]">내 계정 코드</p>
           <div className="mt-2 flex items-center gap-3">
-            <p className="flex-1 rounded-xl bg-[color:var(--cream)] px-4 py-3 text-center text-2xl font-black tracking-[0.18em] text-[color:var(--lavender)]">
+            <p className="min-w-0 flex-1 overflow-hidden rounded-xl bg-[color:var(--cream)] px-3 py-3 text-center text-xl font-black tracking-[0.12em] text-[color:var(--lavender)] sm:px-4 sm:text-2xl sm:tracking-[0.18em]">
               {myAccountCode}
             </p>
             <button
@@ -192,7 +192,7 @@ export function CreateJoinRoom() {
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {step === 'signup' ? (
           <div className="space-y-5">
             <label className="block">
@@ -379,7 +379,7 @@ export function CreateJoinRoom() {
         ) : null}
       </div>
 
-      <div className="space-y-3">
+      <div className="shrink-0 space-y-3">
         {step === 'signup' ? (
           <button
             type="button"
@@ -463,7 +463,7 @@ export function CreateJoinRoom() {
         {step === 'signup' ? (
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/login')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 font-bold text-[color:var(--navy)] ring-1 ring-[color:var(--border)]"
           >
             이미 계정이 있어요
