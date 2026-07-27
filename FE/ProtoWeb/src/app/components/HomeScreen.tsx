@@ -52,8 +52,9 @@ export function HomeScreen() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-[linear-gradient(180deg,#fffafa_0%,#fff4f7_44%,#f4f0ff_100%)]">
-      <div className="px-6 pb-5 pt-[max(1.75rem,env(safe-area-inset-top))]">
+    <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#fffafa_0%,#fff4f7_44%,#f4f0ff_100%)]">
+      <main className="min-h-0 flex-1 overflow-y-auto pb-24 scrollbar-hide">
+        <div className="px-6 pb-5 pt-[max(1.75rem,env(safe-area-inset-top))]">
         {incomingRequests.length > 0 ? (
           <button
             onClick={() => navigate('/create-room')}
@@ -117,10 +118,10 @@ export function HomeScreen() {
         <p className="mb-3 text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">
           TWO WAYS TO GET CLOSER
         </p>
-      </div>
+        </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-6 pb-24 scrollbar-hide">
-        <section aria-labelledby="sogon-delivery-title">
+        <div className="space-y-5 px-6 pb-6">
+          <section aria-labelledby="sogon-delivery-title">
           <button
             type="button"
             onClick={() => navigate('/create-file')}
@@ -157,9 +158,9 @@ export function HomeScreen() {
               </div>
             </div>
           </button>
-        </section>
+          </section>
 
-        <section aria-labelledby="date-match-title">
+          <section aria-labelledby="date-match-title">
           <button
             type="button"
             onClick={() => navigate('/recommendation')}
@@ -198,9 +199,9 @@ export function HomeScreen() {
               </div>
             </div>
           </button>
-        </section>
+          </section>
 
-        <section aria-labelledby="archive-title" className="mx-auto w-full max-w-[366px]">
+          <section aria-labelledby="archive-title" className="mx-auto w-full max-w-[366px]">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">MY ARCHIVE</p>
@@ -233,8 +234,9 @@ export function HomeScreen() {
             <Clock3 className="h-4 w-4 shrink-0" />
             <span className="break-keep">예약한 마음은 지정한 날짜가 되면 열 수 있어요.</span>
           </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
 
       <BottomNav />
     </div>
