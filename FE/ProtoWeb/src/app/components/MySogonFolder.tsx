@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
+import { ScreenHeader } from './shared/ScreenHeader';
 import { SogonFileCard } from './shared/SogonFileCard';
-import { ChevronLeft, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import {
   deleteSogonFile,
   getMySogonFiles,
@@ -186,32 +187,18 @@ export function MySogonFolder() {
 
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
-      {/* Header */}
-      <div className="bg-white border-b border-[color:var(--border)]">
-        <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center px-4 py-4 sm:px-6 sm:py-6">
-          <button
-            type="button"
-            aria-label="홈으로 돌아가기"
-            onClick={() => navigate('/home')}
-            className="z-10 flex h-11 w-11 items-center justify-center rounded-full hover:bg-[color:var(--gray-light)] transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
-          </button>
-          <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
-            내 소곤폴더
-          </h1>
-          <div />
-        </div>
+      <div className="shrink-0 bg-white/92 backdrop-blur-xl">
+        <ScreenHeader title="내 소곤폴더" backTo="/home" backLabel="홈으로 돌아가기" />
 
         {/* Tabs */}
-        <div className="flex gap-4 px-6 pb-3 overflow-x-auto scrollbar-hide">
+        <div className="grid grid-cols-4 gap-1 px-3 pb-2 pt-2">
           {tabs.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 px-2 whitespace-nowrap transition-all ${
+              className={`min-w-0 whitespace-nowrap rounded-full px-1 py-2 text-xs font-bold transition-all ${
                 activeTab === tab
-                  ? 'text-[color:var(--lavender)] border-b-2 border-[color:var(--lavender)] font-medium'
+                  ? 'bg-[color:var(--lavender-light)] text-[color:var(--lavender)]'
                   : 'text-[color:var(--gray)]'
               }`}
             >

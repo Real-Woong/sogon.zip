@@ -102,16 +102,15 @@ export function PlusPlanModal() {
 
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
-      {/* Header */}
-      <div className="px-6 py-8 bg-gradient-to-br from-[color:var(--lavender)] to-[color:var(--pink)] text-white">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Database className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">MY</h1>
+      <header className="shrink-0 bg-[linear-gradient(135deg,var(--lavender),#9b79c9)] px-6 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
+        <div className="mb-1 flex items-center justify-center gap-2">
+          <Database className="h-5 w-5" />
+          <h1 className="text-xl font-black">MY</h1>
         </div>
-        <p className="text-center text-white/90 text-sm">
+        <p className="text-center text-sm text-white/80">
           내 취향과 소곤.zip을 관리해요.
         </p>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-24">
@@ -133,9 +132,9 @@ export function PlusPlanModal() {
               <button
                 key={category}
                 onClick={() => setPreferenceCategory(category)}
-                className={`rounded-full px-3 py-2 text-sm font-bold ${
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-sm font-bold ${
                   preferenceCategory === category
-                    ? 'bg-[color:var(--coral)] text-white'
+                    ? 'bg-[color:var(--coral-deep)] text-white'
                     : 'bg-[color:var(--gray-light)] text-[color:var(--navy)]'
                 }`}
               >
@@ -146,8 +145,8 @@ export function PlusPlanModal() {
           <textarea
             value={preferenceText}
             onChange={(event) => setPreferenceText(event.target.value)}
-            placeholder="예: 조용한 분위기, 1인 3만원 안쪽, 대중교통 30분 이내가 좋아."
-            className="h-24 w-full resize-none rounded-2xl border border-[color:var(--border)] bg-[color:var(--cream)] px-4 py-3 text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--coral)]"
+            placeholder="예: 조용한 분위기, 1인 3만원 안쪽, 대중교통 30분 이내."
+            className="h-28 w-full resize-none rounded-2xl border border-[color:var(--border)] bg-[color:var(--cream)] px-4 py-3 text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--coral-deep)]"
           />
           <button
             onClick={handleSavePreference}

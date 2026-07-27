@@ -4,15 +4,15 @@
 @import 'tw-animate-css';
 
 .sogon-primary-button {
-  background: var(--coral);
+  background: var(--coral-deep);
   color: #ffffff;
   border-radius: 1.35rem;
   padding: 1rem 1.25rem;
-  box-shadow: 0 14px 30px rgba(245, 138, 163, 0.38);
+  box-shadow: 0 12px 26px rgba(201, 82, 112, 0.25);
 }
 
 .sogon-primary-button:hover {
-  background: var(--coral-deep);
+  background: #b94764;
 }
 
 .sogon-soft-button {

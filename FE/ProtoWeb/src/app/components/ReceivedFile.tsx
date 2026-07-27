@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronLeft, Heart, MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle } from 'lucide-react';
 import { getReceivedSogonFiles } from '../lib/sogonStore';
+import { ScreenHeader } from './shared/ScreenHeader';
 
 export function ReceivedFile() {
   const navigate = useNavigate();
@@ -16,21 +17,7 @@ export function ReceivedFile() {
 
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
-      {/* Header */}
-      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center border-b border-[color:var(--border)] bg-white px-4 py-4 sm:px-6 sm:py-6">
-        <button
-          type="button"
-          aria-label="홈으로 돌아가기"
-          onClick={() => navigate('/home')}
-          className="z-10 flex h-11 w-11 items-center justify-center rounded-full hover:bg-[color:var(--gray-light)] transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
-        </button>
-        <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
-          받은 소곤.zip
-        </h1>
-        <div />
-      </div>
+      <ScreenHeader title="받은 소곤.zip" backTo="/home" backLabel="홈으로 돌아가기" />
 
       {/* Content */}
       {receivedFile ? (

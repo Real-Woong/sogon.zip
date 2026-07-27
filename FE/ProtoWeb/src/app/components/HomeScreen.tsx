@@ -53,7 +53,7 @@ export function HomeScreen() {
 
   return (
     <div className="h-full flex flex-col bg-[linear-gradient(180deg,#fffafa_0%,#fff4f7_44%,#f4f0ff_100%)]">
-      <div className="px-6 pt-7 pb-5">
+      <div className="px-6 pb-5 pt-[max(1.75rem,env(safe-area-inset-top))]">
         {incomingRequests.length > 0 ? (
           <button
             onClick={() => navigate('/create-room')}

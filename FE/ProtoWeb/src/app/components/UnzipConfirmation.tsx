@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { ChevronLeft, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { getMySogonFiles, updateSogonFile } from '../lib/sogonStore';
 import { isOpenable } from '../../../../../shared/sogonOpening';
+import { ScreenHeader } from './shared/ScreenHeader';
 
 export function UnzipConfirmation() {
   const navigate = useNavigate();
@@ -39,21 +40,11 @@ export function UnzipConfirmation() {
 
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
-      {/* Header */}
-      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center border-b border-[color:var(--border)] bg-white px-4 py-4 sm:px-6 sm:py-6">
-        <button
-          type="button"
-          aria-label="내 소곤폴더로 돌아가기"
-          onClick={() => navigate('/my-folder')}
-          className="z-10 flex h-11 w-11 items-center justify-center rounded-full hover:bg-[color:var(--gray-light)] transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-[color:var(--navy)]" />
-        </button>
-        <h1 className="break-keep text-center text-lg font-bold leading-tight text-[color:var(--navy)] sm:text-xl">
-          내 소곤.zip 압축해제
-        </h1>
-        <div />
-      </div>
+      <ScreenHeader
+        title="내 소곤.zip 압축해제"
+        backTo="/my-folder"
+        backLabel="내 소곤폴더로 돌아가기"
+      />
 
       {file ? (
         <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 pb-32">

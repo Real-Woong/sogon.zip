@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BottomNav } from './shared/BottomNav';
+import { ScreenHeader } from './shared/ScreenHeader';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSogonFiles } from '../lib/sogonStore';
 
@@ -56,28 +57,24 @@ export function RecordCalendar() {
 
   return (
     <div className="h-full flex flex-col bg-[color:var(--cream)]">
-      {/* Header */}
-      <div className="px-6 py-8 bg-white border-b border-[color:var(--border)]">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="text-xl">📅</span>
-          <h1 className="text-xl font-bold text-[color:var(--navy)]">기록.zip</h1>
-        </div>
-      </div>
+      <ScreenHeader title="기록.zip" />
 
       {/* Calendar */}
-      <div className="bg-white px-6 py-4 border-b border-[color:var(--border)]">
+      <div className="shrink-0 border-b border-[color:var(--border)] bg-white px-5 py-3">
         {/* Month navigation */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-3 flex items-center justify-between">
           <button
             onClick={() => changeMonth(-1)}
-            className="p-2 hover:bg-[color:var(--gray-light)] rounded-lg transition-colors"
+            aria-label="이전 달"
+            className="grid h-10 w-10 place-items-center rounded-xl transition-colors hover:bg-[color:var(--gray-light)]"
           >
             <ChevronLeft className="w-5 h-5 text-[color:var(--navy)]" />
           </button>
           <h2 className="font-bold text-[color:var(--navy)]">{currentMonth}</h2>
           <button
             onClick={() => changeMonth(1)}
-            className="p-2 hover:bg-[color:var(--gray-light)] rounded-lg transition-colors"
+            aria-label="다음 달"
+            className="grid h-10 w-10 place-items-center rounded-xl transition-colors hover:bg-[color:var(--gray-light)]"
           >
             <ChevronRight className="w-5 h-5 text-[color:var(--navy)]" />
           </button>
@@ -101,7 +98,7 @@ export function RecordCalendar() {
               onClick={() => day && setSelectedDate(formatDateKey(day))}
               className={`aspect-square flex flex-col items-center justify-center rounded-lg ${
                 day && formatDateKey(day) === selectedDate
-                  ? 'bg-[color:var(--lavender)] text-white'
+                  ? 'bg-[color:var(--lavender)] font-bold text-white shadow-sm'
                   : day && events[formatDateKey(day)]
                   ? 'bg-[color:var(--lavender)]/10'
                   : ''

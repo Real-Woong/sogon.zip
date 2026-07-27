@@ -14,8 +14,8 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 z-10 rounded-t-[2rem] border-t border-white/70 bg-white/88 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_35px_rgba(77,61,91,0.12)] backdrop-blur-xl sm:px-4">
-      <div className="flex items-center justify-around">
+    <nav className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-[max(.5rem,env(safe-area-inset-bottom))]">
+      <div className="pointer-events-auto grid grid-cols-5 rounded-[1.65rem] border border-white/80 bg-white/94 p-1.5 shadow-[0_10px_32px_rgba(77,61,91,0.16)] backdrop-blur-xl">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -24,14 +24,19 @@ export function BottomNav() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 transition-colors sm:min-w-14 sm:flex-none sm:px-3 ${
-                isActive ? 'bg-[color:var(--blush)] text-[color:var(--coral-deep)]' : 'text-[color:var(--gray)] hover:bg-[color:var(--gray-light)]'
-              }`}
+              aria-current={isActive ? 'page' : undefined}
+              className="flex min-w-0 flex-col items-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[color:var(--gray)] transition-transform active:scale-95"
             >
-              <Icon
-                className={`w-5 h-5 ${isActive ? 'text-[color:var(--coral-deep)]' : 'text-[color:var(--gray)]'}`}
-              />
-              <span className={`text-xs font-bold ${isActive ? 'text-[color:var(--coral-deep)]' : 'text-[color:var(--gray)]'}`}>
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-full transition-colors ${
+                  isActive
+                    ? 'bg-[color:var(--blush)] text-[color:var(--coral-deep)]'
+                    : 'text-[color:var(--gray)]'
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className={`text-[10px] font-black leading-none ${isActive ? 'text-[color:var(--coral-deep)]' : 'text-[color:var(--gray)]'}`}>
                 {item.label}
               </span>
             </button>

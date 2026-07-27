@@ -50,7 +50,7 @@ export function RecommendationZip() {
 
   return (
     <div className="flex h-full flex-col bg-[linear-gradient(180deg,#2d2738_0%,#4a405b_35%,#f8f4ff_35%,#fffafa_100%)]">
-      <div className="px-6 pb-7 pt-8 text-white">
+      <div className="px-6 pb-6 pt-[max(1.75rem,env(safe-area-inset-top))] text-white">
         <div className="mb-2 flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-[color:var(--yellow)]" />
           <p className="text-xs font-black tracking-[0.16em] text-[color:var(--mint)]">DATE MATCH</p>
