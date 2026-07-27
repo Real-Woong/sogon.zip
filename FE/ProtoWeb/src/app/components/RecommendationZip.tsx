@@ -49,40 +49,42 @@ export function RecommendationZip() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#2d2738_0%,#4a405b_35%,#f8f4ff_35%,#fffafa_100%)]">
-      <main className="min-h-0 flex-1 overflow-y-auto pb-24 scrollbar-hide">
-        <div className="px-6 pb-6 pt-[max(1.75rem,env(safe-area-inset-top))] text-white">
-          <div className="mb-2 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[color:var(--yellow)]" />
-            <p className="text-xs font-black tracking-[0.16em] text-[color:var(--mint)]">DATE MATCH</p>
+    <div className="flex h-full min-h-0 flex-col bg-[#f8f4fc]">
+      <main className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f5f0fb_0%,#fffafa_100%)] pb-24 scrollbar-hide">
+        <section className="rounded-b-[2.5rem] bg-[linear-gradient(145deg,#2d2738_0%,#4b405a_100%)] pb-6 shadow-[0_14px_34px_rgba(45,39,56,0.16)]">
+          <div className="px-6 pb-6 pt-[max(1.75rem,env(safe-area-inset-top))] text-white">
+            <div className="mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[color:var(--yellow)]" />
+              <p className="text-xs font-black tracking-[0.16em] text-[color:var(--mint)]">DATE MATCH</p>
+            </div>
+            <h1 className="break-keep text-2xl font-black leading-tight">우리 취향 데이트 추천</h1>
+            <p className="mt-2 break-keep text-sm leading-relaxed text-white/70">
+              각자의 취향과 오늘의 조건을 함께 만족하는 코스를 찾아요.
+            </p>
           </div>
-          <h1 className="break-keep text-2xl font-black leading-tight">우리 취향 데이트 추천</h1>
-          <p className="mt-2 break-keep text-sm leading-relaxed text-white/70">
-            각자의 취향과 오늘의 조건을 함께 만족하는 코스를 찾아요.
-          </p>
-        </div>
 
-        <div className="px-6 pb-4">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => {
-                  setSelectedCategory(category);
-                }}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition-all ${
-                  selectedCategory === category
-                    ? 'bg-white text-[color:var(--navy)]'
-                    : 'bg-white/10 text-white/70'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="px-6">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedCategory(category);
+                  }}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition-all ${
+                    selectedCategory === category
+                      ? 'bg-white text-[color:var(--navy)] shadow-sm'
+                      : 'bg-white/10 text-white/75'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-5 px-6 pb-6 pt-5">
+        <div className="space-y-5 px-6 pb-6 pt-6">
         <section className="rounded-[2rem] bg-white p-5 shadow-[0_14px_36px_rgba(45,39,56,0.12)]">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
