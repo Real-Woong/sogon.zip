@@ -8,7 +8,7 @@
 --
 -- ALTER TABLE ... ADD COLUMN은 SQLite에서 IF NOT EXISTS를 지원하지 않는다.
 -- 이 파일은 한 번만 실행한다.
---   wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
+--   yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
 
 -- 1) 세션 -------------------------------------------------------------------
 -- 토큰 원문은 저장하지 않는다. DB가 유출돼도 살아있는 세션을 넘겨주지 않기 위해

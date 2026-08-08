@@ -282,6 +282,29 @@ export async function requireMember(request: Request, env: Env): Promise<Session
   return member;
 }
 
+/**
+ * 운영자 전용 경로. 지금은 장소 큐레이션에만 쓴다.
+ *
+ * 가입은 항상 role='member'로만 만들어지고, 승격시키는 API는 일부러 두지 않았다.
+ * 권한을 올리려면 D1에서 직접 UPDATE 한다. 베타 운영자가 한 명뿐인 동안은
+ * 이게 가장 사고가 적다.
+ *   yarn wrangler d1 execute sogonzip-db --remote \
+ *     --command="UPDATE members SET role='admin' WHERE login_id='...'"
+ *
+ * 운영자여도 소곤파일 본문에는 접근하지 않는다. 이 헬퍼를 쓰는 경로는
+ * places 같은 공개 데이터로 제한한다.
+ */
+export async function requireAdmin(request: Request, env: Env): Promise<SessionMember> {
+  const member = await requireMember(request, env);
+
+  if (member.role !== 'admin') {
+    // 운영자 경로의 존재 자체를 알리지 않는다.
+    throw json({ error: '찾을 수 없어요.' }, { status: 404 });
+  }
+
+  return member;
+}
+
 // -- 방 --------------------------------------------------------------------
 
 export async function all<T>(statement: D1PreparedStatement) {
