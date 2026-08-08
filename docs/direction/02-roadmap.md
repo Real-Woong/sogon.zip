@@ -9,7 +9,8 @@
 |---|---|
 | 웹 베타 (ProtoWeb) | 배포 중. 로그인·연결·소곤파일·취향 입력 동작 |
 | D1 백엔드 | auth / people / files / preferences 동작 |
-| 마이그레이션 | 0001, 0002 적용됨. **0003 미적용** |
+| 마이그레이션 | 0001, 0002, 0003 모두 적용됨 |
+| 계정 | `sozonzipadmin`(admin) + `test-dasom` / `test-wonwoo`(커플 테스트용 한 쌍). **진웅 개인 계정 없음** |
 | 네이티브 앱 | 골격만. `src/App.tsx` 한 파일 |
 | 추천 | 설계 완료, UI 껍데기만. 실제 추천 로직 없음 |
 | 테스트 | `yarn test` 60개 통과 |
@@ -27,14 +28,14 @@
 - [x] `POST|GET /api/admin/places`, `GET|PATCH|DELETE /api/admin/places/:id` — 운영자 큐레이션
 - [x] `GET /api/admin/merge-reviews`, `POST /api/admin/merge-reviews/:id` — 중복 검토
 - [x] 회귀 테스트 (병합 키, 격자 경계, 신뢰도, 로그 보존, 프라이버시 경계)
+- [x] `0003` 프로덕션 D1 적용 (22 쿼리 = 테이블 7 + 인덱스 15)
+- [x] 운영자 계정 `sozonzipadmin` 생성. 베타 계정 정리(다솜·원우만 남김)
+- [x] `feat/recommendation-foundation` 브랜치 커밋
 
 ### 다음 (순서대로)
 
-1. **`0003` 프로덕션 적용** + 운영자 계정 승격
-   ```bash
-   yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0003_recommendation.sql
-   yarn wrangler d1 execute sogonzip-db --remote --command="UPDATE members SET role='admin' WHERE login_id='<진웅>'"
-   ```
+1. **푸시 + 배포 확인** — 코드가 아직 원격에 없다. Pages는 push를 받아 빌드하므로
+   푸시 전까지 `/api/admin/*`는 404다. 배포 후 admin 로그인 → 장소 1건 등록으로 확인.
 2. **운영자 큐레이션 화면** — 지금은 API만 있어서 curl로만 넣을 수 있다.
    팝업 50건을 손으로 넣으려면 화면이 필요하다. ProtoWeb에 `/admin/places` 최소 폼.
 3. **취향 구조화** — `preferences`(자유 텍스트) → `preference_signals`(axis × tag × weight).
