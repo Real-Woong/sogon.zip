@@ -10,6 +10,10 @@ dist/
 .env.*
 !.env.example
 
+# wrangler 로컬 시크릿 (API 키). 절대 커밋하지 않는다.
+.dev.vars
+.dev.vars.*
+
 # Expo / React Native
 .expo/
 *.jks
