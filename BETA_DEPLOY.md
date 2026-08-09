@@ -26,12 +26,27 @@ yarn verify   # typecheck + P0 회귀 테스트 + build
 
 ## D1 마이그레이션 (배포 전 필수)
 
-D1 데이터베이스에 아래 순서로 한 번씩 실행한다.
+wrangler는 프로젝트 devDependency다. **전역 설치하지 않는다.** `yarn install`을 했으면
+이미 있고, `yarn wrangler`로 실행한다. 버전이 `package.json`에 고정돼 있어야
+사람과 에이전트가 같은 명령을 써도 같은 결과가 나온다.
 
 ```bash
-wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0001_beta_schema.sql
-wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
+yarn install                 # wrangler 포함
+yarn wrangler login          # 최초 1회. 브라우저가 열린다
 ```
+
+그 다음 D1 데이터베이스에 아래 순서로 한 번씩 실행한다.
+
+```bash
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0001_beta_schema.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0003_recommendation.sql
+```
+
+`--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
+
+`0003`은 데이트 코스 추천용 테이블만 추가한다. 아직 이 테이블을 읽고 쓰는 API가 없으므로
+지금 적용해도 기존 동작에는 영향이 없다. 설계 배경은 `docs/date-recommendation-v2-ai.md` 참고.
 
 `0002`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
 

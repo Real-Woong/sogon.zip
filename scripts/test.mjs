@@ -151,7 +151,11 @@ async function testPasswords() {
 
 // ------------------------------------------------------------ 가시성 / 방 정원
 function buildSchema(db) {
-  for (const file of ['0001_beta_schema.sql', '0002_security_and_scheduling.sql']) {
+  for (const file of [
+    '0001_beta_schema.sql',
+    '0002_security_and_scheduling.sql',
+    '0003_recommendation.sql'
+  ]) {
     execFileSync('sqlite3', [db], {
       input: readFileSync(join(root, 'BE/migrations', file), 'utf8'),
       stdio: ['pipe', 'pipe', 'pipe']
@@ -305,10 +309,194 @@ function testRoomAndVisibility() {
   check('거절된 뒤에는 다시 요청할 수 있다', reRequestAllowed, true);
 }
 
+// ------------------------------------------------------------------- 추천 기반
+async function testPlaceNormalize() {
+  const {
+    computeInfoConfidence,
+    geohashEncode,
+    geohashWithNeighbors,
+    normalizePlaceName,
+    haversineMeters
+  } = await bundle('shared/placeNormalize.ts', 'place.mjs');
+
+  section('[추천/병합] 같은 장소는 같은 키로 정규화된다');
+  check(
+    '괄호 지점 표기와 붙여쓴 지점 표기가 같은 키가 된다',
+    normalizePlaceName('성수 티하우스 (성수점)') === normalizePlaceName('성수티하우스 성수점'),
+    true
+  );
+  check('대소문자·공백 차이를 흡수한다', normalizePlaceName('  BLUE BOTTLE  성수점 '), 'bluebottle');
+  check(
+    '지점 표기만 남는 이름은 통째로 지우지 않는다',
+    normalizePlaceName('본점').length > 0,
+    true
+  );
+  check(
+    '다른 장소는 다른 키를 유지한다',
+    normalizePlaceName('성수 티하우스') === normalizePlaceName('성수 커피하우스'),
+    false
+  );
+
+  section('[추천/후보생성] 격자 경계에서 후보가 새지 않는다');
+  const seoul = { lat: 37.5665, lng: 126.978 };
+  check('geohash5는 5자리', geohashEncode(seoul.lat, seoul.lng, 5).length, 5);
+
+  const cells = geohashWithNeighbors(geohashEncode(seoul.lat, seoul.lng, 5));
+  check('이웃 집합은 자기 셀 포함 9개이고 중복이 없다', new Set(cells).size, 9);
+
+  // 셀 하나만 조회하면 경계 바로 건너편 장소가 통째로 빠진다.
+  // ±4km 범위를 훑어 전부 이웃 집합 안에 들어오는지 본다.
+  let outside = 0;
+  for (let dLat = -0.036; dLat <= 0.0361; dLat += 0.004) {
+    for (let dLng = -0.045; dLng <= 0.0451; dLng += 0.005) {
+      if (!cells.includes(geohashEncode(seoul.lat + dLat, seoul.lng + dLng, 5))) {
+        outside += 1;
+      }
+    }
+  }
+  check('±4km 안의 좌표는 모두 이웃 격자 안에 있다', outside, 0);
+  check(
+    '경도 180도 근처에서도 이웃 계산이 깨지지 않는다',
+    new Set(geohashWithNeighbors(geohashEncode(0, 179.999, 5))).size,
+    9
+  );
+
+  section('[추천/거리] 하버사인');
+  const distance = haversineMeters(seoul, { lat: 37.4979, lng: 127.0276 });
+  check('서울시청-강남역이 8~9km로 나온다', distance > 8000 && distance < 9500, true);
+  check('같은 좌표는 0m', haversineMeters(seoul, seoul), 0);
+
+  section('[추천/신뢰도] 종료일 없는 팝업은 만점을 받지 못한다');
+  const full = { address: 'a', priceLevel: 2, isIndoor: true, tags: ['조용한'], openingHours: {} };
+  check('종료일 없는 팝업은 0.5로 눌린다', computeInfoConfidence({ kind: 'popup', ...full }), 0.5);
+  check('종료일 있는 팝업은 만점', computeInfoConfidence({ kind: 'popup', ...full, endsAt: '2026-12-01' }), 1);
+  check('상시 카페는 종료일 없이도 만점', computeInfoConfidence({ kind: 'cafe', ...full }), 1);
+  check('정보가 없으면 낮다', computeInfoConfidence({ kind: 'cafe' }), 0.1);
+}
+
+function testRecommendationSchema() {
+  const db = join(work, 'rec.db');
+  buildSchema(db);
+  seedRoom(db);
+
+  sqlite(
+    db,
+    `INSERT INTO places (id,kind,name,name_normalized,lat,lng,geohash5,info_confidence,status,created_at,updated_at)
+       VALUES ('pl_1','popup','성수 팝업','성수팝업',37.54,127.05,'wydm7',0.8,'active','2026-08-09','2026-08-09');
+     INSERT INTO place_sources VALUES ('src_1','pl_1','manual','ext_1',NULL,'2026-08-09');
+     INSERT INTO recommendation_requests (id,room_id,requested_by,target_date,ranker_version,created_at)
+       VALUES ('rq_1','room_ab','mem_a','2026-08-15','rules-v0','2026-08-09');
+     INSERT INTO recommendation_impressions
+       VALUES ('im_1','rq_1','pl_1',1,1,0.82,'{"min_fit":0.7}',NULL,'2026-08-09');
+     INSERT INTO recommendation_feedback VALUES ('fb_1','rq_1','pl_1','mem_a','saved',5,'2026-08-09');`
+  );
+
+  section('[추천/수집] 배치를 다시 돌려도 중복 행이 생기지 않는다');
+  let idempotent = false;
+  try {
+    sqlite(db, `INSERT INTO place_sources VALUES ('src_2','pl_1','manual','ext_1',NULL,'2026-08-10');`);
+  } catch {
+    idempotent = true;
+  }
+  check('같은 (source, external_id)는 한 번만 들어간다', idempotent, true);
+
+  section('[추천/피드백] 개인 단위로 기록된다');
+  // 점수식의 min(A 만족도, B 만족도)는 누가 만족했는지 모르면 학습할 수 없다.
+  sqlite(db, `INSERT INTO recommendation_feedback VALUES ('fb_2','rq_1','pl_1','mem_b','skipped',NULL,'2026-08-09');`);
+  check(
+    '같은 추천에 대해 두 사람의 반응이 따로 남는다',
+    sqlite(db, `SELECT group_concat(member_id || ':' || action) FROM recommendation_feedback WHERE request_id='rq_1' ORDER BY id;`),
+    'mem_a:saved,mem_b:skipped'
+  );
+
+  let duplicateFeedback = false;
+  try {
+    sqlite(db, `INSERT INTO recommendation_feedback VALUES ('fb_3','rq_1','pl_1','mem_a','saved',4,'2026-08-09');`);
+  } catch {
+    duplicateFeedback = true;
+  }
+  check('같은 사람의 같은 반응은 중복 저장되지 않는다', duplicateFeedback, true);
+
+  section('[추천/학습데이터] 장소가 닫혀도 로그는 남는다');
+  // places를 물리 삭제하면 과거 추천 기록의 참조가 깨진다. 소프트 삭제만 한다.
+  sqlite(db, `UPDATE places SET status='closed' WHERE id='pl_1';`);
+  check(
+    '팝업이 끝나도 노출 로그는 그대로다',
+    sqlite(db, `SELECT count(*) FROM recommendation_impressions WHERE place_id='pl_1';`),
+    '1'
+  );
+  check(
+    '추천 당시 피처가 보존된다',
+    sqlite(db, `SELECT features_json FROM recommendation_impressions WHERE id='im_1';`),
+    '{"min_fit":0.7}'
+  );
+
+  let orphanBlocked = false;
+  try {
+    sqlite(
+      db,
+      `PRAGMA foreign_keys=ON;
+       INSERT INTO recommendation_impressions VALUES ('im_9','rq_1','pl_none',2,NULL,0.1,'{}',NULL,'2026-08-09');`
+    );
+  } catch {
+    orphanBlocked = true;
+  }
+  check('없는 장소로는 노출을 기록할 수 없다', orphanBlocked, true);
+
+  section('[추천/프라이버시] 소곤파일 본문은 추천 경로에 들어가지 않는다');
+  // preference_signals는 동의한 취향에서만 만들어진다. 스키마에 본문으로 가는
+  // 경로가 아예 없어야 한다.
+  const signalColumns = sqlite(db, `SELECT group_concat(name) FROM pragma_table_info('preference_signals');`);
+  check('preference_signals에 content 계열 컬럼이 없다', /content/i.test(signalColumns), false);
+  check(
+    'preference_signals는 sogon_files를 참조하지 않는다',
+    sqlite(db, `SELECT count(*) FROM pragma_foreign_key_list('preference_signals') WHERE "table"='sogon_files';`),
+    '0'
+  );
+
+  section('[추천/하드제약] 알레르기는 점수가 아니라 필터다');
+  sqlite(
+    db,
+    `INSERT INTO preference_signals VALUES ('ps_1','room_ab','mem_a','food','땅콩',-1,1,'manual',NULL,'2026-08-09','2026-08-09');
+     INSERT INTO preference_signals VALUES ('ps_2','room_ab','mem_a','mood','조용한',0.8,0,'manual',NULL,'2026-08-09','2026-08-09');`
+  );
+  check(
+    '하드 제약만 따로 조회된다',
+    sqlite(db, `SELECT group_concat(tag) FROM preference_signals WHERE room_id='room_ab' AND is_hard_constraint=1;`),
+    '땅콩'
+  );
+
+  let duplicateSignal = false;
+  try {
+    sqlite(db, `INSERT INTO preference_signals VALUES ('ps_3','room_ab','mem_a','food','땅콩',0.5,0,'extracted',NULL,'2026-08-09','2026-08-09');`);
+  } catch {
+    duplicateSignal = true;
+  }
+  check('같은 사람의 같은 축·태그는 한 행으로 유지된다', duplicateSignal, true);
+
+  section('[추천/방 해체] 추천 신호는 방과 함께 정리된다');
+  check(
+    'room CASCADE로 preference_signals가 지워진다',
+    sqlite(
+      db,
+      `PRAGMA foreign_keys=ON;
+       UPDATE members SET room_id=NULL WHERE room_id='room_ab';
+       DELETE FROM sogon_files WHERE room_id='room_ab';
+       DELETE FROM preferences WHERE room_id='room_ab';
+       DELETE FROM rooms WHERE id='room_ab';
+       SELECT count(*) FROM preference_signals;`
+    ),
+    '0'
+  );
+  check('공용 장소 데이터는 방과 무관하게 남는다', sqlite(db, `SELECT count(*) FROM places;`), '1');
+}
+
 try {
   await testOpeningRules();
   await testPasswords();
   testRoomAndVisibility();
+  await testPlaceNormalize();
+  testRecommendationSchema();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }
