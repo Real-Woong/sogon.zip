@@ -1,7 +1,7 @@
 # 로드맵 — 지금 어디, 다음 무엇
 
 > **우선순위의 단일 소스다.** `SOGONZIP.md`의 Priority 절과 어긋나면 이 파일이 이긴다.
-> 작업을 끝낸 사람이 그 자리에서 갱신한다. 최종 갱신: 2026-08-09
+> 작업을 끝낸 사람이 그 자리에서 갱신한다. 최종 갱신: 2026-08-10
 
 ## 지금 상태
 
@@ -53,15 +53,15 @@
    여기가 실제로 건수가 나오는 소스다.
 3. **끝난 행사 정리** — 매일 돌릴 것. `ends_at < now`면 `status='closed'`.
    지금은 수집 때 안 들어올 뿐, 이미 들어온 게 끝나면 그대로 남는다.
-2. **운영자 큐레이션 화면** — 지금은 API만 있어서 curl로만 넣을 수 있다.
-   팝업 50건을 손으로 넣으려면 화면이 필요하다. ProtoWeb에 `/admin/places` 최소 폼.
-3. **취향 구조화** — `preferences`(자유 텍스트) → `preference_signals`(axis × tag × weight).
+4. **운영자 큐레이션 화면** — 팝업은 공개 API가 없어서 결국 손으로 넣어야 한다.
+   ProtoWeb에 `/admin/places` 최소 폼.
+5. **취향 구조화** — `preferences`(자유 텍스트) → `preference_signals`(axis × tag × weight).
    규칙 기반 키워드 추출 먼저. 애매한 문장만 LLM 태그 제안.
-4. **`POST /api/recommendations/generate`** — 하드 필터 → 후보 생성 → 규칙 점수 → 코스 조합
+6. **`POST /api/recommendations/generate`** — 하드 필터 → 후보 생성 → 규칙 점수 → 코스 조합
    → **impression 로깅**. 로깅이 이 엔드포인트의 절반이다.
-5. **`POST /api/recommendations/:id/feedback`** — 개인 단위. 저장/건너뛰기/방문/만족도.
-6. **추천 화면 연결** — `RecommendationZip.tsx`가 실제 API를 부르게 한다.
-7. **배치 수집 워커** — TourAPI + 서울 문화행사부터. 공공데이터라 약관이 가장 명확하다.
+7. **`POST /api/recommendations/:id/feedback`** — 개인 단위. 저장/건너뛰기/방문/만족도.
+8. **추천 화면 연결** — `RecommendationZip.tsx`가 실제 API를 부르게 한다.
+9. **배치 수집 워커** — 수집기가 자리를 잡으면 Cron Worker로 옮긴다.
 
 ### L0 졸업 조건
 
