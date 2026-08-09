@@ -1,0 +1,15 @@
+# 이 파일을 `.dev.vars`로 복사하고 값을 채운다. `.dev.vars`는 커밋되지 않는다.
+#
+#   cp .dev.vars.example .dev.vars
+#
+# 키를 터미널에 echo 하거나 채팅에 붙여넣지 않는다. 한 번 찍히면
+# 셸 히스토리와 대화 기록에 남는다.
+
+# 서울 열린데이터광장  https://data.seoul.go.kr  (즉시 발급)
+SEOUL_OPEN_API_KEY=
+
+# 공공데이터포털 TourAPI  https://www.data.go.kr  (활용신청, 반영에 1시간쯤)
+DATA_GO_KR_KEY=
+
+# 카카오 REST API  https://developers.kakao.com  (로컬 검색 + 다음 웹/블로그 검색)
+KAKAO_REST_KEY=
