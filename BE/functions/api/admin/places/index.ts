@@ -2,7 +2,7 @@
  * 운영자 장소 큐레이션. 팝업스토어는 공개 API가 없어서 초기 데이터는 사람이 넣는다.
  * 배치 ingest가 붙어도 이 경로는 남는다 — 자동 수집이 못 잡는 팝업이 계속 생긴다.
  *
- * 설계 배경: docs/date-recommendation-v2-ai.md
+ * 설계 배경: docs/reference/recommendation/date-recommendation-v2-ai.md
  */
 import { all, Env, handle, json, newId, readJson, requireAdmin } from '../../_shared';
 import {
@@ -231,7 +231,7 @@ export function validatePlace(input: PlaceInput, base?: ValidatedPlace): Validat
 
 /**
  * 병합 후보를 찾는다. 키는 세 축이다 — 정규화 상호 + 좌표 + 기간 겹침.
- * (`../../../../../docs/date-course-data-strategy.md` §4)
+ * (`../../../../../docs/reference/data/date-course-data-strategy.md` §4)
  *
  * 이웃 격자까지 훑는 이유: 격자 하나만 보면 셀 경계 건너편의 같은 장소를 놓친다.
  * 기간을 보는 이유: 같은 극장의 다음 달 공연은 같은 이름·같은 좌표여도 다른 것이다.

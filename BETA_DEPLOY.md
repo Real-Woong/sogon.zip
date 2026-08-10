@@ -1,6 +1,6 @@
 # Sogon.zip Free Beta Deployment
 
-Last updated: 2026-06-18
+Last updated: 2026-08-10
 
 목표: 돈 한 푼 들이지 않고 친구 3명에게 현재 Sogon.zip 웹 프로토타입을 베타 링크로 공유한다.
 
@@ -48,13 +48,38 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0004_date_pla
 
 `0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
 날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는
-추천 생성 API는 아직 없다. 설계 배경은 `docs/date-recommendation-v2-ai.md` 참고.
+추천 생성 API는 아직 없다. 설계 배경은
+`docs/reference/recommendation/date-recommendation-v2-ai.md` 참고.
 
 `0002`와 `0004`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
 
 `0002` 적용 후 기존 로그인 세션은 모두 무효가 된다. 이미 가입한 친구가 있다면
 다시 로그인해달라고 알려준다. 비밀번호는 그대로 쓸 수 있고, 로그인하는 순간
 서버가 자동으로 최신 해싱으로 옮긴다.
+
+## 만료 장소 Cron Worker
+
+Pages 배포와 별도로, 끝난 장소를 매일 닫는 Worker를 배포한다. 설정의 Cron은 UTC 기준이며
+`5 18 * * *`는 한국 시간 03:05다.
+
+```bash
+yarn wrangler deploy --config workers/close-expired/wrangler.jsonc
+```
+
+Worker 이름은 `sogonzip-close-expired`이고 프로덕션 `sogonzip-db`만 바인딩한다.
+배포 후 Cloudflare 대시보드의 Cron Events와 Workers Logs에서
+`close_expired_completed` / `close_expired_failed`를 확인한다. 실시간 로그가 필요하면:
+
+```bash
+yarn wrangler tail sogonzip-close-expired --format json
+```
+
+Cron 장애 때만 아래 수동 명령을 복구 수단으로 쓴다. 같은 조건의 `active` 행만 닫으므로
+Worker와 겹쳐 실행돼도 결과는 멱등적이다.
+
+```bash
+yarn node scripts/ingest/closeExpired.mjs --apply
+```
 
 ## Cloudflare Pages 설정값
 
@@ -164,7 +189,6 @@ https://프로젝트이름.pages.dev
 - 세션은 30일이면 만료된다(쓰는 동안에는 자동 연장).
 - 추천 기능은 아직 자리만 잡혀 있고 실제 추천 로직이 없다.
 - 알림이 없어서, 소곤파일이 열릴 날이 와도 앱을 직접 열어야 알 수 있다.
-- `DB-DEMO/`는 나중에 서버 DB로 옮기기 위한 시연용 SQL이다.
 
 ## 배포 후 꼭 확인할 것
 

@@ -538,6 +538,116 @@ async function testPlaceNormalize() {
   check('정보가 없으면 낮다', computeInfoConfidence({ kind: 'cafe' }), 0.1);
 }
 
+// --------------------------------------------------------------- 만료 장소 Cron
+async function testCloseExpiredRules() {
+  const { CloseExpiredError, closeExpired } = await bundle(
+    'workers/close-expired/src/index.ts',
+    'close_expired.mjs'
+  );
+
+  function fakeDb(rows, { failUpdate = false, leaveExpired = false } = {}) {
+    return {
+      prepare(sql) {
+        return {
+          bind(...values) {
+            return {
+              async first() {
+                const cutoff = values[0];
+                return {
+                  count: rows.filter(
+                    row => row.status === 'active' && row.endsAt !== null && row.endsAt < cutoff
+                  ).length
+                };
+              },
+              async run() {
+                if (failUpdate) throw new Error('D1 쓰기 실패');
+                const [updatedAt, cutoff] = values;
+                let changed = 0;
+                for (const row of rows) {
+                  if (row.status !== 'active' || row.endsAt === null || row.endsAt >= cutoff) continue;
+                  if (leaveExpired && changed > 0) continue;
+                  row.status = 'closed';
+                  row.updatedAt = updatedAt;
+                  changed += 1;
+                }
+                return { success: true, meta: { changes: changed } };
+              }
+            };
+          }
+        };
+      }
+    };
+  }
+
+  const cutoff = '2026-08-10T18:05:00.000Z';
+  const rows = [
+    { id: 'expired_1', status: 'active', endsAt: '2026-08-09T14:59:59.999Z' },
+    { id: 'expired_2', status: 'active', endsAt: '2026-08-10T14:59:59.999Z' },
+    { id: 'future', status: 'active', endsAt: '2026-08-11T14:59:59.999Z' },
+    { id: 'permanent', status: 'active', endsAt: null },
+    { id: 'manual_closed', status: 'closed', endsAt: '2026-08-01T14:59:59.999Z' }
+  ];
+
+  section('[추천/만료정리] Cron은 끝난 active 장소만 닫는다');
+  const first = await closeExpired(fakeDb(rows), cutoff);
+  check('후보·성공·실패 건수를 검증한다', first, {
+    cutoff,
+    candidateCount: 2,
+    successCount: 2,
+    failureCount: 0
+  });
+  check(
+    '상시·미종료·이미 닫힌 장소는 건드리지 않는다',
+    rows.map(row => `${row.id}:${row.status}`),
+    [
+      'expired_1:closed',
+      'expired_2:closed',
+      'future:active',
+      'permanent:active',
+      'manual_closed:closed'
+    ]
+  );
+
+  const second = await closeExpired(fakeDb(rows), cutoff);
+  check('같은 시각으로 재실행해도 다시 바뀌지 않는다', second.successCount, 0);
+
+  section('[추천/만료정리] 일부 또는 전체 실패를 건수와 함께 드러낸다');
+  const partialRows = [
+    { id: 'expired_1', status: 'active', endsAt: '2026-08-09T14:59:59.999Z' },
+    { id: 'expired_2', status: 'active', endsAt: '2026-08-09T14:59:59.999Z' }
+  ];
+  let partialResult = null;
+  try {
+    await closeExpired(fakeDb(partialRows, { leaveExpired: true }), cutoff);
+  } catch (error) {
+    if (error instanceof CloseExpiredError) partialResult = error.result;
+  }
+  check('재확인에서 남은 행은 실패 건수로 남긴다', partialResult, {
+    cutoff,
+    candidateCount: 2,
+    successCount: 1,
+    failureCount: 1
+  });
+
+  let failedResult = null;
+  try {
+    await closeExpired(
+      fakeDb([{ id: 'expired', status: 'active', endsAt: '2026-08-09T14:59:59.999Z' }], {
+        failUpdate: true
+      }),
+      cutoff
+    );
+  } catch (error) {
+    if (error instanceof CloseExpiredError) failedResult = error.result;
+  }
+  check('D1 쓰기 실패도 후보 전체를 실패 건수로 남긴다', failedResult, {
+    cutoff,
+    candidateCount: 1,
+    successCount: 0,
+    failureCount: 1
+  });
+}
+
 function testRecommendationSchema() {
   const db = join(work, 'rec.db');
   buildSchema(db);
@@ -661,6 +771,7 @@ try {
   await testPasswords();
   testRoomAndVisibility();
   await testPlaceNormalize();
+  await testCloseExpiredRules();
   testRecommendationSchema();
   testDatePlanSchema();
 } finally {

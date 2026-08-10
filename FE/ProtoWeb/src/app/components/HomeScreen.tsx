@@ -136,9 +136,6 @@ export function HomeScreen() {
           </div>
         </div>
 
-        <p className="mb-3 text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">
-          TWO WAYS TO GET CLOSER
-        </p>
         </div>
 
         <div className="space-y-5 px-6 pb-6">
@@ -147,28 +144,52 @@ export function HomeScreen() {
               <button
                 type="button"
                 onClick={() => navigate('/date-plans')}
-                className="flex w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
+                className="group flex min-h-[190px] w-full flex-col justify-between overflow-hidden rounded-[2rem] bg-[linear-gradient(145deg,#fff1bd_0%,#ffe3d6_48%,#eadfff_100%)] p-5 text-left shadow-[0_16px_36px_rgba(128,99,149,0.16)] ring-1 ring-white transition-transform hover:-translate-y-0.5"
               >
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color:var(--yellow)]/25 text-[color:var(--coral-deep)]">
-                  <CalendarPlus className="h-6 w-6" />
+                <div className="flex w-full items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black tracking-[0.14em] text-[color:var(--coral-deep)]">
+                      OUR DATE PLAN
+                    </p>
+                    <h2
+                      id="date-plan-title"
+                      className="mt-1 break-keep text-2xl font-black leading-tight text-[color:var(--navy)]"
+                    >
+                      데이트 일정 정하기
+                    </h2>
+                  </div>
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/75 text-[color:var(--coral-deep)] shadow-sm">
+                    <CalendarPlus className="h-6 w-6" />
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black tracking-[0.12em] text-[color:var(--coral-deep)]">DATE PLAN</p>
-                  <h2 id="date-plan-title" className="mt-0.5 break-keep font-black text-[color:var(--navy)]">
-                    {hasTodayQuestion
-                      ? '오늘의 질문이 도착했어요'
-                      : datePlans[0]?.title ?? '둘의 다음 데이트 정하기'}
-                  </h2>
-                  <p className="mt-1 text-xs text-[color:var(--gray)]">
-                    {datePlans[0]
-                      ? `${datePlans[0].scheduledDate}${datePlans[0].startTime ? ` · ${datePlans[0].startTime}` : ''} · 다가오는 약속 ${datePlans.length}개`
-                      : '날짜를 정하면 D-7부터 오늘의 질문이 열려요.'}
-                  </p>
+                <p className="mt-3 break-keep text-sm leading-relaxed text-[color:var(--navy)]/70">
+                  둘이 만날 날짜와 시간을 먼저 정해요. 저장한 일정은 상대 홈에도 바로 보여요.
+                </p>
+                <div className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-white/75 px-4 py-3 text-[color:var(--navy)] shadow-sm">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">
+                      {hasTodayQuestion
+                        ? '오늘의 질문이 도착했어요'
+                        : datePlans[0]?.title ?? '아직 정해둔 데이트가 없어요'}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[color:var(--gray)]">
+                      {datePlans[0]
+                        ? `${datePlans[0].scheduledDate}${datePlans[0].startTime ? ` · ${datePlans[0].startTime}` : ''} · 총 ${datePlans.length}개`
+                        : '일정을 정하면 D-7부터 오늘의 질문이 열려요.'}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1 text-sm font-black text-[color:var(--coral-deep)]">
+                    <span>{datePlans.length > 0 ? '일정 보기' : '일정 정하기'}</span>
+                    <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                  </div>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
               </button>
             </section>
           ) : null}
+
+          <p className="mx-auto w-full max-w-[366px] text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">
+            TWO WAYS TO GET CLOSER
+          </p>
 
           <section aria-labelledby="sogon-delivery-title">
           <button

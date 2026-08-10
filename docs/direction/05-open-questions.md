@@ -10,7 +10,8 @@
 ### ~~Q1. 팝업 데이터를 어떻게 채울 것인가~~ → 답 나옴 (`03-decisions.md` #13)
 
 공공 API로 기본 데이터를 만들고, 팝업은 검색·수동 큐레이션으로 보강한다.
-Instagram 화이트리스트는 1단계에서 뺀다. (`../date-course-data-strategy.md`)
+Instagram 화이트리스트는 1단계에서 뺀다.
+(`../reference/data/date-course-data-strategy.md`)
 
 ### ~~Q2. 베타에서 추천을 실제로 켤 것인가~~ → 답 나옴 (`03-decisions.md` #18)
 

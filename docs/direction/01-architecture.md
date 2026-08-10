@@ -84,7 +84,7 @@ Cloudflare Workers 무료 플랜은 **요청당 CPU 10ms**다. 이게 여러 설
 
 ## 추천 시스템 구조
 
-상세는 [`../date-recommendation-v2-ai.md`](../date-recommendation-v2-ai.md). 핵심만:
+상세는 [`../reference/recommendation/date-recommendation-v2-ai.md`](../reference/recommendation/date-recommendation-v2-ai.md). 핵심만:
 
 ```text
 [수집 — 배치, 하루 1~2회]  외부 API → 정규화 → 중복 병합 → places

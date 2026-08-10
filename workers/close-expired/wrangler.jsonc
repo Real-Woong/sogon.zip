@@ -1,0 +1,24 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "sogonzip-close-expired",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sogonzip-db",
+      "database_id": "0c1e11fa-5266-4244-ad77-ab0769862d12"
+    }
+  ],
+  "triggers": {
+    // Cron은 UTC다. 한국 시간 03:05에 전날 끝난 장소를 닫는다.
+    "crons": ["5 18 * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "head_sampling_rate": 1
+    }
+  }
+}

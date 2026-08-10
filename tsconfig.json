@@ -23,6 +23,6 @@
       "@/*": ["FE/ProtoWeb/src/*"]
     }
   },
-  "include": ["shared", "FE/ProtoWeb/src", "BE/functions", "functions", "vite.config.ts"],
-  "exclude": ["node_modules", "dist", "FE/App", "DB-DEMO"]
+  "include": ["shared", "FE/ProtoWeb/src", "BE/functions", "functions", "workers", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "FE/App", "docs/archive"]
 }
