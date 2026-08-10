@@ -113,7 +113,10 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** 이미 로그인했다면 들어갈 이유가 없는 화면(로그인 등)을 감싼다. */
+/**
+ * 이미 로그인했다면 들어갈 이유가 없는 화면을 감싼다.
+ * 로그인, 온보딩 소개, 관계 선택이 여기 해당한다 — 셋 다 계정을 만들기 전 화면이다.
+ */
 export function RedirectIfAuthed() {
   const { status } = useSession();
 
@@ -122,6 +125,29 @@ export function RedirectIfAuthed() {
   }
 
   if (status === 'authed') {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <Outlet />;
+}
+
+/**
+ * 연결 화면(`/create-room`)용. 여기는 세 종류가 들어온다.
+ *
+ * - 비로그인: 가입해야 하니 통과시킨다
+ * - 로그인했지만 연결 안 됨: 연결 코드를 넣어야 하니 통과시킨다
+ * - 이미 연결됨: 소곤폴더 정원이 2명이라 더 할 게 없다. 홈으로 보낸다
+ *
+ * 마지막 경우를 막지 않으면, 이미 연결된 사람이 "연인 찾기"를 계속 마주친다.
+ */
+export function RedirectIfConnected() {
+  const { status, profile } = useSession();
+
+  if (status === 'checking') {
+    return <SessionLoading />;
+  }
+
+  if (status === 'authed' && profile?.isConnected) {
     return <Navigate to="/home" replace />;
   }
 

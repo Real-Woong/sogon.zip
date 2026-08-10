@@ -14,16 +14,18 @@ import {
 } from 'lucide-react';
 import {
   getConnectionRequests,
-  getProfile,
   getSogonFiles,
   getUserPreferences,
   syncRemoteData,
   type ConnectionRequest
 } from '../lib/sogonStore';
+import { useSession } from '../lib/session';
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(() => getProfile());
+  // 프로필은 세션이 단일 소스다. 여기서 따로 들고 있으면 상대가 연결을 수락했을 때
+  // 화면마다 연결 상태가 어긋난다.
+  const { profile, refresh } = useSession();
   const [files, setFiles] = useState(() => getSogonFiles());
   const [preferences, setPreferences] = useState(() => getUserPreferences());
   const [incomingRequests, setIncomingRequests] = useState<ConnectionRequest[]>([]);
@@ -38,9 +40,12 @@ export function HomeScreen() {
     : profile?.nickname;
 
   useEffect(() => {
+    // 상대가 연결을 수락한 걸 이 화면이 처음 알게 된다. 파일·취향만 받아오면
+    // 연결 배너가 그대로 남는다.
+    void refresh();
+
     syncRemoteData()
       .then(() => {
-        setProfile(getProfile());
         setFiles(getSogonFiles());
         setPreferences(getUserPreferences());
       })
@@ -49,6 +54,8 @@ export function HomeScreen() {
     getConnectionRequests()
       .then(data => setIncomingRequests(data.incoming ?? []))
       .catch(() => undefined);
+    // 화면에 들어올 때 한 번만 확인한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
