@@ -7,6 +7,7 @@
 import { all, Env, handle, json, newId, readJson, requireAdmin } from '../../_shared';
 import {
   computeInfoConfidence,
+  dateRangesOverlap,
   geohashEncode,
   geohashWithNeighbors,
   haversineMeters,
@@ -229,16 +230,21 @@ export function validatePlace(input: PlaceInput, base?: ValidatedPlace): Validat
 // -- 중복 탐지 --------------------------------------------------------------
 
 /**
- * 정규화 상호가 같은 기존 장소를 이웃 격자까지 훑는다.
- * 격자 하나만 보면 셀 경계 건너편의 같은 장소를 놓친다.
+ * 병합 후보를 찾는다. 키는 세 축이다 — 정규화 상호 + 좌표 + 기간 겹침.
+ * (`../../../../../docs/date-course-data-strategy.md` §4)
+ *
+ * 이웃 격자까지 훑는 이유: 격자 하나만 보면 셀 경계 건너편의 같은 장소를 놓친다.
+ * 기간을 보는 이유: 같은 극장의 다음 달 공연은 같은 이름·같은 좌표여도 다른 것이다.
  */
 export async function findNameMatches(env: Env, place: ValidatedPlace, excludeId?: string) {
   const cells = geohashWithNeighbors(place.geohash5);
   const placeholders = cells.map(() => '?').join(', ');
 
-  const rows = await all<Pick<PlaceRow, 'id' | 'name' | 'lat' | 'lng' | 'status'>>(
+  const rows = await all<
+    Pick<PlaceRow, 'id' | 'name' | 'lat' | 'lng' | 'status' | 'starts_at' | 'ends_at'>
+  >(
     env.DB.prepare(
-      `SELECT id, name, lat, lng, status
+      `SELECT id, name, lat, lng, status, starts_at, ends_at
          FROM places
         WHERE name_normalized = ?
           AND geohash5 IN (${placeholders})
@@ -247,6 +253,7 @@ export async function findNameMatches(env: Env, place: ValidatedPlace, excludeId
   );
 
   return rows
+    .filter(row => dateRangesOverlap(place, { startsAt: row.starts_at, endsAt: row.ends_at }))
     .map(row => ({ ...row, distance: haversineMeters(place, row) }))
     .sort((a, b) => a.distance - b.distance);
 }

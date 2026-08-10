@@ -13,9 +13,9 @@
 | D1 | 프로덕션 `sogonzip-db`만 쓴다. **프리뷰 환경은 당분간 안 쓴다** (`03-decisions.md` #12)<br>→ 프리뷰 배포에서 API가 500인 건 정상이다. 검증은 프로덕션에서 한다 |
 | 계정 | `sozonzipadmin`(admin) + `test-dasom` / `test-wonwoo`(커플 테스트용 한 쌍). **진웅 개인 계정 없음**<br>프리뷰 DB에는 `sozonzipadmin`만 있다 |
 | 네이티브 앱 | 골격만. `src/App.tsx` 한 파일 |
-| 장소 데이터 | **1,364건** — TourAPI 961 + 서울 문화행사 403.<br>음식점 458 · 활동 569 · 전시 223 · 카페 107 · 공원 7 |
+| 장소 데이터 | **1,364건** — TourAPI 961 + 서울 문화행사 403.<br>음식점 458 · 활동 569 · 전시 223 · 카페 107 · 공원 7<br>병합 키 충돌 0건 (`03-decisions.md` #15) |
 | 추천 | 설계 완료, UI 껍데기만. 실제 추천 로직 없음 |
-| 테스트 | `yarn test` 60개 통과 |
+| 테스트 | `yarn test` 71개 통과 |
 
 ## 현재 트랙: 추천 L0 (규칙 기반)
 
@@ -47,23 +47,32 @@
 - [x] **서울 문화행사 403건 프로덕션 적재.** 두 번 돌려도 404 그대로(멱등성 확인)
 
 - [x] TourAPI 961건 적재 (`03-decisions.md` #14)
+- [x] **병합 키 버그 수정** (`03-decisions.md` #15) — 괄호 안을 남기고 기간 겹침을
+      병합 키에 넣었다. `renormalize.mjs`로 409건 backfill. 충돌 12건 → 0건
+- [x] **끝난 행사 정리** (`03-decisions.md` #16) — `closeExpired.mjs`.
+      **매일 한 번 돌려야 한다.** 30일 안에 224건이 끝난다
 
-1. **병합 키 버그 수정** — `05-open-questions.md` Q5. 실데이터에서 나왔다.
-   행사 제목의 괄호를 지우면 이름이 통째로 사라져서 서로 다른 공연이 같은
-   장소로 판정된다. 지금 데이터는 멀쩡하지만 운영자 등록 API가 오작동한다.
-2. **카카오 로컬 수집기** — 카카오맵 제품 활성화가 먼저다.
+1. **카카오 로컬 수집기** — 카카오맵 제품 활성화가 먼저다.
    지금은 403 `disabled OPEN_MAP_AND_LOCAL service`.
-3. **끝난 행사 정리** — 매일 돌릴 것. `ends_at < now`면 `status='closed'`.
-   지금은 수집 때 안 들어올 뿐, 이미 들어온 게 끝나면 그대로 남는다.
-4. **운영자 큐레이션 화면** — 팝업은 공개 API가 없어서 결국 손으로 넣어야 한다.
+   수집기를 짜기 전에 카카오 약관의 저장·표시 제한을 확인하고 ADR에 남긴다.
+2. **운영자 큐레이션 화면** — 팝업은 공개 API가 없어서 결국 손으로 넣어야 한다.
    ProtoWeb에 `/admin/places` 최소 폼.
-5. **취향 구조화** — `preferences`(자유 텍스트) → `preference_signals`(axis × tag × weight).
+3. **취향 구조화** — `preferences`(자유 텍스트) → `preference_signals`(axis × tag × weight).
    규칙 기반 키워드 추출 먼저. 애매한 문장만 LLM 태그 제안.
-6. **`POST /api/recommendations/generate`** — 하드 필터 → 후보 생성 → 규칙 점수 → 코스 조합
+4. **`POST /api/recommendations/generate`** — 하드 필터 → 후보 생성 → 규칙 점수 → 코스 조합
    → **impression 로깅**. 로깅이 이 엔드포인트의 절반이다.
-7. **`POST /api/recommendations/:id/feedback`** — 개인 단위. 저장/건너뛰기/방문/만족도.
-8. **추천 화면 연결** — `RecommendationZip.tsx`가 실제 API를 부르게 한다.
-9. **배치 수집 워커** — 수집기가 자리를 잡으면 Cron Worker로 옮긴다.
+5. **`POST /api/recommendations/:id/feedback`** — 개인 단위. 저장/건너뛰기/방문/만족도.
+6. **추천 화면 연결** — `RecommendationZip.tsx`가 실제 API를 부르게 한다.
+7. **배치 수집 워커** — 수집기가 자리를 잡으면 Cron Worker로 옮긴다.
+   `closeExpired.mjs`가 첫 후보다 — 매일 돌아야 하는데 지금은 손으로 돌린다.
+
+### 정기 작업 (지금은 손으로)
+
+| 언제 | 명령 |
+|---|---|
+| 매일 | `yarn node scripts/ingest/closeExpired.mjs --apply` |
+| 주 1회 | `yarn node scripts/ingest/seoulCulture.mjs --apply` |
+| `normalizePlaceName`을 고칠 때마다 | `yarn node scripts/ingest/renormalize.mjs --apply` |
 
 ### L0 졸업 조건
 

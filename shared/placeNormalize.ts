@@ -50,26 +50,59 @@ export function isPreferenceAxis(value: unknown): value is PreferenceAxis {
  */
 const BRANCH_SUFFIX = /\s*\S{1,10}(점|지점)$/;
 
+/** 괄호 안이 지점 표기뿐인 경우: "(성수점)", "(2호점)", "(중구 을지로점)". */
+const BRACKETED_BRANCH = /[([{][^)\]}]{0,12}(점|지점)[)\]}]/g;
+
+/** 공백·문장부호. 소스마다 띄어쓰기가 달라서 그대로 두면 병합이 안 된다. */
+const PUNCTUATION = /[\s··,.'"`~!@#$%^&*\-_=+/\\|:;?[\](){}]/g;
+
 /**
  * 병합 판단용 키를 만든다. 사람에게 보여주는 이름은 places.name에 원본 그대로 남기고,
  * 이 값은 places.name_normalized에만 쓴다.
+ *
+ * 괄호 안 글자는 지우지 않고 남긴다. 지점 표기 말고는 괄호가 부연인지 정체성인지
+ * 기계적으로 구분할 방법이 없고, 실데이터에서는 정체성인 쪽이 압도적이었다 —
+ * 서울 문화행사 제목이 `[주최기관] 제목 [작품명]` 형식이라 괄호를 지우면
+ * "뮤지컬"만 남아 서로 다른 공연이 한 장소로 뭉쳤다. (`05-open-questions.md` Q5)
+ *
+ * 남겨도 손해가 적은 이유: 괄호 문자 자체는 마지막 구두점 제거에서 사라지므로
+ * "블루보틀 (성수)"와 "블루보틀 성수"는 어차피 같은 키가 된다. 한쪽 소스가
+ * 괄호 부분을 통째로 빠뜨렸을 때만 갈라진다.
  */
 export function normalizePlaceName(raw: string): string {
-  let value = raw.normalize('NFKC').trim();
+  // 지점 괄호만 떼어낸다: "카페 (2호점)" → "카페"
+  let value = raw.normalize('NFKC').trim().replace(BRACKETED_BRANCH, ' ').trim();
 
-  // 괄호 안 부연설명 제거: "성수 티하우스 (성수점)" → "성수 티하우스"
-  value = value.replace(/[([{][^)\]}]*[)\]}]/g, ' ').trim();
-
-  // 지점 표기 제거. 남는 토큰이 있을 때만.
+  // 붙여 쓴 지점 표기도 제거. 남는 토큰이 있을 때만.
   const withoutBranch = value.replace(BRANCH_SUFFIX, '').trim();
   if (withoutBranch.length > 0) {
     value = withoutBranch;
   }
 
-  // 공백·문장부호를 모두 없앤다. 소스마다 띄어쓰기가 달라서 그대로 두면 병합이 안 된다.
-  value = value.replace(/[\s··,.'"`~!@#$%^&*\-_=+/\\|:;?]/g, '');
+  return value.replace(PUNCTUATION, '').toLowerCase();
+}
 
-  return value.toLowerCase();
+// -- 기간 -------------------------------------------------------------------
+
+export type DateRange = { startsAt?: string | null; endsAt?: string | null };
+
+function boundTime(value: string | null | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? fallback : ms;
+}
+
+/**
+ * 병합 키의 세 번째 축. 이름과 좌표가 같아도 기간이 안 겹치면 다른 것이다.
+ * 같은 극장에서 다음 달에 올리는 다른 공연이 "이미 등록된 장소"가 되면 안 된다.
+ *
+ * 기간이 없는 쪽은 상시 운영으로 본다(항상 겹친다). 카페·음식점이 여기 해당한다.
+ */
+export function dateRangesOverlap(a: DateRange, b: DateRange): boolean {
+  return (
+    boundTime(a.startsAt, -Infinity) <= boundTime(b.endsAt, Infinity) &&
+    boundTime(b.startsAt, -Infinity) <= boundTime(a.endsAt, Infinity)
+  );
 }
 
 // -- 지오해시 ---------------------------------------------------------------

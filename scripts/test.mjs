@@ -313,6 +313,7 @@ function testRoomAndVisibility() {
 async function testPlaceNormalize() {
   const {
     computeInfoConfidence,
+    dateRangesOverlap,
     geohashEncode,
     geohashWithNeighbors,
     normalizePlaceName,
@@ -325,6 +326,11 @@ async function testPlaceNormalize() {
     normalizePlaceName('성수 티하우스 (성수점)') === normalizePlaceName('성수티하우스 성수점'),
     true
   );
+  check(
+    '이름이 짧아도 지점 괄호는 떼어낸다',
+    normalizePlaceName('카페 (2호점)') === normalizePlaceName('카페 2호점'),
+    true
+  );
   check('대소문자·공백 차이를 흡수한다', normalizePlaceName('  BLUE BOTTLE  성수점 '), 'bluebottle');
   check(
     '지점 표기만 남는 이름은 통째로 지우지 않는다',
@@ -334,6 +340,59 @@ async function testPlaceNormalize() {
   check(
     '다른 장소는 다른 키를 유지한다',
     normalizePlaceName('성수 티하우스') === normalizePlaceName('성수 커피하우스'),
+    false
+  );
+
+  section('[추천/병합] 지점 표기 말고는 괄호 안을 지우지 않는다 (Q5)');
+  // 서울 문화행사 제목은 `[주최기관] 제목 [작품명]`이라 괄호를 다 지우면
+  // "뮤지컬"만 남아 서로 다른 공연 6건이 같은 장소로 판정됐다.
+  check(
+    '주최기관·작품명이 살아남는다',
+    normalizePlaceName('[세종문화회관] 뮤지컬 [베토벤]'),
+    '세종문화회관뮤지컬베토벤'
+  );
+  check(
+    '같은 장르의 다른 공연은 다른 키다',
+    normalizePlaceName('[세종문화회관] 뮤지컬 [베토벤]') ===
+      normalizePlaceName('[중구문화재단] 뮤지컬 [디어 에반 핸슨]'),
+    false
+  );
+  check(
+    '좌표까지 같은 같은 기획의 다른 회차도 구분된다',
+    normalizePlaceName('[서울갤러리] 런치 스테이지 [기타리스트 HOOON]') ===
+      normalizePlaceName('[서울갤러리] 런치 스테이지 [해금 솔로 아티스트 우하린]'),
+    false
+  );
+  check(
+    '괄호 밖이 길어도 괄호 안을 지우지 않는다',
+    normalizePlaceName('[세종문화회관] 세종예술아카데미 [박인홍 작가] 여행드로잉 클래스') ===
+      normalizePlaceName('[세종문화회관] 세종예술아카데미 [정승빈 작가] 여행드로잉 클래스'),
+    false
+  );
+  check(
+    '괄호는 문자만 사라져서 괄호 없는 표기와 여전히 병합된다',
+    normalizePlaceName('블루보틀 (성수)') === normalizePlaceName('블루보틀 성수'),
+    true
+  );
+
+  section('[추천/병합] 기간이 안 겹치면 같은 장소가 아니다 (Q5)');
+  const august = { startsAt: '2026-08-01T00:00:00Z', endsAt: '2026-08-31T00:00:00Z' };
+  const september = { startsAt: '2026-09-01T00:00:00Z', endsAt: '2026-09-30T00:00:00Z' };
+  check('같은 극장의 다음 달 공연은 겹치지 않는다', dateRangesOverlap(august, september), false);
+  check(
+    '하루라도 걸치면 겹친다',
+    dateRangesOverlap(august, { startsAt: '2026-08-31T00:00:00Z', endsAt: '2026-10-01T00:00:00Z' }),
+    true
+  );
+  check('기간이 없는 상시 장소는 항상 겹친다', dateRangesOverlap({}, august), true);
+  check(
+    '시작일만 있는 쪽은 그 뒤로 열려 있다',
+    dateRangesOverlap({ startsAt: '2026-07-01T00:00:00Z' }, september),
+    true
+  );
+  check(
+    '종료일만 있는 쪽은 그 앞으로 열려 있다',
+    dateRangesOverlap({ endsAt: '2026-07-01T00:00:00Z' }, september),
     false
   );
 
