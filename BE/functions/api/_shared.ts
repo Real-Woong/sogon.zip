@@ -355,7 +355,7 @@ export async function buildProfile(env: Env, member: SessionMember) {
 // -- 삭제 -------------------------------------------------------------------
 
 /**
- * 방을 해체한다. 방에 있던 소곤파일과 취향 기록도 함께 사라진다.
+ * 방을 해체한다. 방에 있던 소곤파일·취향·날짜 계획도 함께 사라진다.
  *
  * ⚠️ 순서가 중요하다. `members.room_id`에 `REFERENCES rooms(id) ON DELETE CASCADE`가
  * 걸려 있어서, 방을 먼저 지우면 그 방에 속한 **계정까지 함께 삭제된다.**

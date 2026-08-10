@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import {
   CalendarHeart,
+  CalendarPlus,
   ChevronRight,
   Clock3,
   FolderOpen,
@@ -14,10 +15,13 @@ import {
 } from 'lucide-react';
 import {
   getConnectionRequests,
+  getDatePlans,
   getSogonFiles,
+  getTodayDateQuestion,
   getUserPreferences,
   syncRemoteData,
-  type ConnectionRequest
+  type ConnectionRequest,
+  type DatePlan
 } from '../lib/sogonStore';
 import { useSession } from '../lib/session';
 
@@ -29,6 +33,8 @@ export function HomeScreen() {
   const [files, setFiles] = useState(() => getSogonFiles());
   const [preferences, setPreferences] = useState(() => getUserPreferences());
   const [incomingRequests, setIncomingRequests] = useState<ConnectionRequest[]>([]);
+  const [datePlans, setDatePlans] = useState<DatePlan[]>([]);
+  const [hasTodayQuestion, setHasTodayQuestion] = useState(false);
   const myFiles = files.filter(file => file.isMine !== false);
   const upcomingCount = myFiles.filter(file => file.status === 'scheduled').length;
   const readyCount = myFiles.filter(file => file.status === 'ready').length;
@@ -53,6 +59,14 @@ export function HomeScreen() {
 
     getConnectionRequests()
       .then(data => setIncomingRequests(data.incoming ?? []))
+      .catch(() => undefined);
+
+    getDatePlans()
+      .then(data => setDatePlans(data.datePlans))
+      .catch(() => undefined);
+
+    getTodayDateQuestion()
+      .then(data => setHasTodayQuestion(Boolean(data.todayQuestion?.answeredOptionId === null)))
       .catch(() => undefined);
     // 화면에 들어올 때 한 번만 확인한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,6 +142,34 @@ export function HomeScreen() {
         </div>
 
         <div className="space-y-5 px-6 pb-6">
+          {isConnected ? (
+            <section aria-labelledby="date-plan-title" className="mx-auto w-full max-w-[366px]">
+              <button
+                type="button"
+                onClick={() => navigate('/date-plans')}
+                className="flex w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
+              >
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color:var(--yellow)]/25 text-[color:var(--coral-deep)]">
+                  <CalendarPlus className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black tracking-[0.12em] text-[color:var(--coral-deep)]">DATE PLAN</p>
+                  <h2 id="date-plan-title" className="mt-0.5 break-keep font-black text-[color:var(--navy)]">
+                    {hasTodayQuestion
+                      ? '오늘의 질문이 도착했어요'
+                      : datePlans[0]?.title ?? '둘의 다음 데이트 정하기'}
+                  </h2>
+                  <p className="mt-1 text-xs text-[color:var(--gray)]">
+                    {datePlans[0]
+                      ? `${datePlans[0].scheduledDate}${datePlans[0].startTime ? ` · ${datePlans[0].startTime}` : ''} · 다가오는 약속 ${datePlans.length}개`
+                      : '날짜를 정하면 D-7부터 오늘의 질문이 열려요.'}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+              </button>
+            </section>
+          ) : null}
+
           <section aria-labelledby="sogon-delivery-title">
           <button
             type="button"

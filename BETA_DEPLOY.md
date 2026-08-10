@@ -41,14 +41,16 @@ yarn wrangler login          # 최초 1회. 브라우저가 열린다
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0001_beta_schema.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0003_recommendation.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0004_date_plans.sql
 ```
 
 `--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
 
-`0003`은 데이트 코스 추천용 테이블만 추가한다. 아직 이 테이블을 읽고 쓰는 API가 없으므로
-지금 적용해도 기존 동작에는 영향이 없다. 설계 배경은 `docs/date-recommendation-v2-ai.md` 참고.
+`0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
+날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는
+추천 생성 API는 아직 없다. 설계 배경은 `docs/date-recommendation-v2-ai.md` 참고.
 
-`0002`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
+`0002`와 `0004`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
 
 `0002` 적용 후 기존 로그인 세션은 모두 무효가 된다. 이미 가입한 친구가 있다면
 다시 로그인해달라고 알려준다. 비밀번호는 그대로 쓸 수 있고, 로그인하는 순간

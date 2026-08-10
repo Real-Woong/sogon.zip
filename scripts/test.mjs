@@ -154,13 +154,118 @@ function buildSchema(db) {
   for (const file of [
     '0001_beta_schema.sql',
     '0002_security_and_scheduling.sql',
-    '0003_recommendation.sql'
+    '0003_recommendation.sql',
+    '0004_date_plans.sql'
   ]) {
     execFileSync('sqlite3', [db], {
       input: readFileSync(join(root, 'BE/migrations', file), 'utf8'),
       stdio: ['pipe', 'pipe', 'pipe']
     });
   }
+}
+
+// --------------------------------------------------------- 날짜 / 오늘의 질문
+async function testDateQuestionRules() {
+  const {
+    DATE_QUESTIONS,
+    dateKeyInTimeZone,
+    daysBetweenDateKeys,
+    isDateKey,
+    questionForDate
+  } = await bundle('shared/dateQuestions.ts', 'date_questions.mjs');
+
+  section('[날짜/질문] 한국 날짜 기준으로 D-7부터 하루 한 문항');
+  check('문항은 D-7부터 D-1까지 7개다', DATE_QUESTIONS.length, 7);
+  check('D-7은 첫 문항', questionForDate('2026-08-17', '2026-08-10').id, DATE_QUESTIONS[0].id);
+  check('D-1은 마지막 문항', questionForDate('2026-08-11', '2026-08-10').id, DATE_QUESTIONS[6].id);
+  check('D-8에는 아직 묻지 않는다', questionForDate('2026-08-18', '2026-08-10'), null);
+  check('약속 당일에는 새 질문이 없다', questionForDate('2026-08-10', '2026-08-10'), null);
+  check('윤년을 건너도 날짜 차이가 맞다', daysBetweenDateKeys('2028-02-28', '2028-03-01'), 2);
+  check('없는 날짜는 거절한다', isDateKey('2026-02-30'), false);
+  check(
+    'UTC 날짜가 전날이어도 한국 날짜를 쓴다',
+    dateKeyInTimeZone(new Date('2026-08-09T15:30:00.000Z')),
+    '2026-08-10'
+  );
+
+  section('[날짜/질문] 선택지는 학습 신호 한 축을 공유한다');
+  check(
+    '반대 선택이 같은 axis/tag의 부호만 바꾼다',
+    DATE_QUESTIONS.every(question => {
+      const [left, right] = question.options;
+      return left.axis === right.axis && left.tag === right.tag && left.weight === -right.weight;
+    }),
+    true
+  );
+}
+
+function testDatePlanSchema() {
+  const db = join(work, 'date-plans.db');
+  buildSchema(db);
+  seedRoom(db);
+
+  sqlite(
+    db,
+    `PRAGMA foreign_keys=ON;
+     INSERT INTO date_plans
+       (id,room_id,created_by,title,scheduled_date,start_time,status,created_at,updated_at)
+       VALUES ('plan_1','room_ab','mem_a','성수 데이트','2026-08-17','14:30','planned','2026-08-10','2026-08-10');
+     INSERT INTO preferences VALUES ('pref_q1','room_ab','mem_a','오늘의 질문','질문 — 답','2026-08-10');
+     INSERT INTO date_question_answers
+       (id,plan_id,room_id,member_id,question_id,option_id,axis,tag,weight,preference_id,answered_on,created_at)
+       VALUES ('ans_1','plan_1','room_ab','mem_a','activity-energy','active','activity','active',1,'pref_q1','2026-08-10','2026-08-10');`
+  );
+
+  section('[날짜/약속] 방의 두 사람에게 같은 약속이 보인다');
+  check(
+    'room_id로 조회하면 만든 사람과 무관하게 약속이 나온다',
+    sqlite(db, `SELECT title FROM date_plans WHERE room_id='room_ab' AND status='planned';`),
+    '성수 데이트'
+  );
+
+  section('[날짜/질문] 같은 사람이 같은 문항에 두 번 답하지 않는다');
+  let duplicateAnswer = false;
+  try {
+    sqlite(
+      db,
+      `INSERT INTO date_question_answers
+        (id,plan_id,room_id,member_id,question_id,option_id,axis,tag,weight,answered_on,created_at)
+       VALUES ('ans_2','plan_1','room_ab','mem_a','activity-energy','calm','activity','active',-1,'2026-08-10','2026-08-10');`
+    );
+  } catch {
+    duplicateAnswer = true;
+  }
+  check('계획·사람·문항 단위 중복이 막힌다', duplicateAnswer, true);
+
+  sqlite(
+    db,
+    `INSERT INTO date_question_answers
+      (id,plan_id,room_id,member_id,question_id,option_id,axis,tag,weight,answered_on,created_at)
+     VALUES ('ans_3','plan_1','room_ab','mem_b','activity-energy','calm','activity','active',-1,'2026-08-10','2026-08-10');`
+  );
+  check(
+    '두 사람 답은 개인 단위로 각각 남는다',
+    sqlite(db, `SELECT group_concat(member_id || ':' || weight) FROM date_question_answers ORDER BY member_id;`),
+    'mem_a:1.0,mem_b:-1.0'
+  );
+
+  section('[날짜/추천] 추천 요청은 날짜 계획을 선택적으로 참조한다');
+  sqlite(
+    db,
+    `INSERT INTO recommendation_requests
+      (id,room_id,requested_by,target_date,ranker_version,created_at,plan_id)
+     VALUES ('rq_plan','room_ab','mem_a','2026-08-17','rules-v0','2026-08-10','plan_1');`
+  );
+  check('plan_id로 추천 요청을 찾는다', sqlite(db, `SELECT plan_id FROM recommendation_requests WHERE id='rq_plan';`), 'plan_1');
+
+  section('[날짜/프라이버시] 날짜와 질문에는 소곤파일 본문 경로가 없다');
+  const answerColumns = sqlite(db, `SELECT group_concat(name) FROM pragma_table_info('date_question_answers');`);
+  check('질문 답 테이블에 content 컬럼이 없다', /content/i.test(answerColumns), false);
+  check(
+    '질문 답은 sogon_files를 참조하지 않는다',
+    sqlite(db, `SELECT count(*) FROM pragma_foreign_key_list('date_question_answers') WHERE "table"='sogon_files';`),
+    '0'
+  );
 }
 
 function seedRoom(db) {
@@ -552,10 +657,12 @@ function testRecommendationSchema() {
 
 try {
   await testOpeningRules();
+  await testDateQuestionRules();
   await testPasswords();
   testRoomAndVisibility();
   await testPlaceNormalize();
   testRecommendationSchema();
+  testDatePlanSchema();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

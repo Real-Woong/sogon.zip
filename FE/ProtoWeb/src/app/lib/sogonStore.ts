@@ -3,6 +3,7 @@ import {
   resolveOpening,
   type SogonFileStatus
 } from '../../../../../shared/sogonOpening';
+import type { DateQuestion } from '../../../../../shared/dateQuestions';
 
 export type { SogonFileStatus };
 
@@ -68,6 +69,24 @@ export type UserPreference = {
   category: string;
   text: string;
   createdAt: string;
+};
+
+export type DatePlan = {
+  id: string;
+  title: string;
+  scheduledDate: string;
+  startTime: string | null;
+  status: string;
+  createdAt: string;
+  createdByNickname: string | null;
+  createdByMe: boolean;
+};
+
+export type TodayDateQuestion = {
+  plan: Pick<DatePlan, 'id' | 'title' | 'scheduledDate'>;
+  question: DateQuestion;
+  answeredOptionId: string | null;
+  answeredCount: number;
 };
 
 const profileKey = 'sogonzip.profile';
@@ -509,6 +528,47 @@ export async function saveUserPreference(input: Omit<UserPreference, 'id' | 'cre
   };
   writeJson(preferencesKey, [preference, ...getUserPreferences()]);
   return preference;
+}
+
+// -- 데이트 약속 / 오늘의 질문 ---------------------------------------------
+
+export async function getDatePlans() {
+  return apiFetch<{ datePlans: DatePlan[] }>('/api/date-plans');
+}
+
+export async function createDatePlan(input: {
+  title: string;
+  scheduledDate: string;
+  startTime?: string | null;
+}) {
+  return apiFetch<{ datePlan: DatePlan }>('/api/date-plans', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getTodayDateQuestion() {
+  return apiFetch<{ todayQuestion: TodayDateQuestion | null }>(
+    '/api/date-plans/questions/today'
+  );
+}
+
+export async function answerTodayDateQuestion(input: {
+  planId: string;
+  questionId: string;
+  optionId: string;
+}) {
+  const data = await apiFetch<{
+    answer: { optionId: string; optionLabel: string };
+    preference: UserPreference;
+  }>('/api/date-plans/questions/today', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+
+  // 홈의 취향 개수도 다음 동기화 전부터 맞게 보인다.
+  writeJson(preferencesKey, [data.preference, ...getUserPreferences()]);
+  return data;
 }
 
 export async function syncRemoteData() {

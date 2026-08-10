@@ -250,6 +250,9 @@ SogonZip/
     # BE: Cloudflare D1 schema migrations
     migrations/
       0001_beta_schema.sql
+      0002_security_and_scheduling.sql
+      0003_recommendation.sql
+      0004_date_plans.sql
 
   # Cloudflare Pages adapter. Keep this at repo root.
   functions/
@@ -427,7 +430,8 @@ Cloudflare requirement:
 - Run the migrations in order in that D1 database:
   - `BE/migrations/0001_beta_schema.sql`
   - `BE/migrations/0002_security_and_scheduling.sql` (한 번만 실행. `ALTER TABLE ADD COLUMN`은 재실행하면 실패한다.)
-  - `BE/migrations/0003_recommendation.sql` (추천용 테이블. 아직 쓰는 API가 없어 기존 동작에는 영향이 없다.)
+  - `BE/migrations/0003_recommendation.sql` (추천 대상·취향 신호·학습 로그 테이블.)
+  - `BE/migrations/0004_date_plans.sql` (한 번만 실행. 날짜 계획·오늘의 질문 답과 추천 요청의 `plan_id`를 추가한다.)
 - Bind the database to the Pages project with variable name `DB`.
 - Redeploy after adding the binding.
 

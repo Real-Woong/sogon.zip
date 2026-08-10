@@ -1,0 +1,259 @@
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, Check, Clock3, HeartHandshake, Plus, Sparkles } from 'lucide-react';
+import {
+  answerTodayDateQuestion,
+  createDatePlan,
+  getDatePlans,
+  getTodayDateQuestion,
+  type DatePlan,
+  type TodayDateQuestion
+} from '../lib/sogonStore';
+import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
+import { ScreenHeader } from './shared/ScreenHeader';
+
+function dateLabel(value: string) {
+  const date = new Date(`${value}T00:00:00+09:00`);
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    timeZone: 'Asia/Seoul'
+  }).format(date);
+}
+
+export function DatePlansScreen() {
+  const [plans, setPlans] = useState<DatePlan[]>([]);
+  const [todayQuestion, setTodayQuestion] = useState<TodayDateQuestion | null>(null);
+  const [title, setTitle] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [answeringOption, setAnsweringOption] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const minDate = useMemo(() => dateKeyInTimeZone(), []);
+
+  const load = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const [planData, questionData] = await Promise.all([
+        getDatePlans(),
+        getTodayDateQuestion()
+      ]);
+      setPlans(planData.datePlans);
+      setTodayQuestion(questionData.todayQuestion);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '약속을 불러오지 못했어요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!title.trim() || !scheduledDate || isSaving) {
+      return;
+    }
+    setIsSaving(true);
+    setError('');
+    try {
+      await createDatePlan({
+        title: title.trim(),
+        scheduledDate,
+        startTime: startTime || null
+      });
+      setTitle('');
+      setScheduledDate('');
+      setStartTime('');
+      await load();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '약속을 저장하지 못했어요.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAnswer = async (optionId: string) => {
+    if (!todayQuestion || todayQuestion.answeredOptionId || answeringOption) {
+      return;
+    }
+    setAnsweringOption(optionId);
+    setError('');
+    try {
+      await answerTodayDateQuestion({
+        planId: todayQuestion.plan.id,
+        questionId: todayQuestion.question.id,
+        optionId
+      });
+      setTodayQuestion(current => current
+        ? { ...current, answeredOptionId: optionId, answeredCount: current.answeredCount + 1 }
+        : null);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '답을 저장하지 못했어요.');
+    } finally {
+      setAnsweringOption(null);
+    }
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#fffafa_0%,#f5f0ff_100%)]">
+      <ScreenHeader title="데이트 약속" backTo="/home" backLabel="홈으로 돌아가기" />
+
+      <main className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 pb-10 scrollbar-hide">
+        {todayQuestion ? (
+          <section className="rounded-[2rem] bg-[color:var(--navy)] p-5 text-white shadow-[0_16px_36px_rgba(45,39,56,0.2)]">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black tracking-[0.15em] text-[color:var(--mint)]">
+                  오늘의 질문
+                </p>
+                <p className="mt-1 text-xs font-bold text-white/60">
+                  {todayQuestion.plan.title} · {dateLabel(todayQuestion.plan.scheduledDate)}
+                </p>
+              </div>
+              <Sparkles className="h-6 w-6 shrink-0 text-[color:var(--yellow)]" />
+            </div>
+            <h2 className="break-keep text-xl font-black leading-snug">
+              {todayQuestion.question.prompt}
+            </h2>
+            <div className="mt-4 grid gap-2">
+              {todayQuestion.question.options.map(option => {
+                const selected = todayQuestion.answeredOptionId === option.id;
+                const answered = Boolean(todayQuestion.answeredOptionId);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={answered || Boolean(answeringOption)}
+                    onClick={() => void handleAnswer(option.id)}
+                    className={`flex min-h-12 items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-black transition-colors ${
+                      selected
+                        ? 'bg-[color:var(--mint)] text-[color:var(--navy)]'
+                        : 'bg-white/10 text-white disabled:opacity-55'
+                    }`}
+                  >
+                    <span>{option.label}</span>
+                    {selected ? <Check className="h-5 w-5" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs font-bold text-white/55">
+              {todayQuestion.answeredOptionId
+                ? `답을 저장했어요 · 두 사람 중 ${todayQuestion.answeredCount}명 답변`
+                : '각자 고른 답이 이 약속의 취향 신호로 쌓여요.'}
+            </p>
+          </section>
+        ) : null}
+
+        <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-black text-[color:var(--navy)]">새 약속 정하기</h2>
+              <p className="text-xs text-[color:var(--gray)]">상대의 약속 목록에도 바로 보여요.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">약속 이름</span>
+              <input
+                value={title}
+                maxLength={40}
+                onChange={event => setTitle(event.target.value)}
+                placeholder="예: 성수에서 여름 데이트"
+                className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
+              />
+            </label>
+            <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-2">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">날짜</span>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  min={minDate}
+                  onChange={event => setScheduledDate(event.target.value)}
+                  className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-3 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">시간 선택</span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={event => setStartTime(event.target.value)}
+                  className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-3 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              disabled={!title.trim() || !scheduledDate || isSaving}
+              onClick={() => void handleCreate()}
+              className="w-full rounded-2xl bg-[color:var(--coral-deep)] px-4 py-3.5 text-sm font-black text-white disabled:opacity-45"
+            >
+              {isSaving ? '약속을 저장하는 중...' : '둘의 약속으로 저장하기'}
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-black text-[color:var(--navy)]">다가오는 약속</h2>
+            <span className="text-xs font-black text-[color:var(--coral-deep)]">{plans.length}개</span>
+          </div>
+          {isLoading ? (
+            <div className="rounded-3xl bg-white/70 p-6 text-center text-sm font-bold text-[color:var(--gray)]">
+              둘의 약속을 불러오는 중이에요.
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-[color:var(--border)] bg-white/55 p-7 text-center">
+              <HeartHandshake className="mx-auto h-8 w-8 text-[color:var(--lavender)]" />
+              <p className="mt-3 break-keep text-sm font-black text-[color:var(--navy)]">
+                아직 정해둔 데이트가 없어요
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--gray)]">날짜를 잡으면 D-7부터 질문이 열려요.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {plans.map(plan => (
+                <article key={plan.id} className="rounded-3xl bg-white/90 p-4 shadow-sm ring-1 ring-white">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color:var(--lavender)]/12 text-[color:var(--lavender)]">
+                      <CalendarDays className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words font-black text-[color:var(--navy)]">{plan.title}</h3>
+                      <p className="mt-1 text-sm font-bold text-[color:var(--coral-deep)]">
+                        {dateLabel(plan.scheduledDate)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--gray)]">
+                        {plan.startTime ? (
+                          <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{plan.startTime}</span>
+                        ) : null}
+                        <span>{plan.createdByMe ? '내가 정한 약속' : `${plan.createdByNickname ?? '상대'}님이 정한 약속`}</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {error ? (
+          <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {error}
+          </p>
+        ) : null}
+      </main>
+    </div>
+  );
+}
