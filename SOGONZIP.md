@@ -10,6 +10,7 @@
 
 ## 작업 전 읽을 것
 
+0. [`HANDOFF.md`](./HANDOFF.md) — 2026-08-11 시점 스냅샷과 다음 작업 (있는 동안만)
 1. [`docs/direction/00-product.md`](./docs/direction/00-product.md) — 제품 정체성과 절대 규칙
 2. [`docs/direction/02-roadmap.md`](./docs/direction/02-roadmap.md) — 현재 상태와 다음 작업
 3. [`docs/direction/04-working-agreement.md`](./docs/direction/04-working-agreement.md) — 검증·작업 규칙
