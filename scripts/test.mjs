@@ -150,13 +150,17 @@ async function testPasswords() {
 }
 
 // ------------------------------------------------------------ 가시성 / 방 정원
+/** 순서대로 실행해야 하는 append-only 마이그레이션. 새 파일을 만들면 여기 더한다. */
+const MIGRATIONS = [
+  '0001_beta_schema.sql',
+  '0002_security_and_scheduling.sql',
+  '0003_recommendation.sql',
+  '0004_date_plans.sql',
+  '0005_date_plan_window.sql'
+];
+
 function buildSchema(db) {
-  for (const file of [
-    '0001_beta_schema.sql',
-    '0002_security_and_scheduling.sql',
-    '0003_recommendation.sql',
-    '0004_date_plans.sql'
-  ]) {
+  for (const file of MIGRATIONS) {
     execFileSync('sqlite3', [db], {
       input: readFileSync(join(root, 'BE/migrations', file), 'utf8'),
       stdio: ['pipe', 'pipe', 'pipe']
@@ -765,6 +769,320 @@ function testRecommendationSchema() {
   check('공용 장소 데이터는 방과 무관하게 남는다', sqlite(db, `SELECT count(*) FROM places;`), '1');
 }
 
+// ------------------------------------------------------------ 하루 코스 시간표
+async function testCourseSkeleton() {
+  const m = await bundle('shared/dateCourseSkeleton.ts', 'course_skeleton.mjs');
+  const {
+    buildCourseSkeleton,
+    applyWeatherToSkeleton,
+    minutesToTime,
+    SERVICE_START_MINUTES,
+    SERVICE_END_MINUTES
+  } = m;
+
+  const labelsOf = skeleton => skeleton.slots.map(slot => slot.label);
+
+  section('[코스/골격] 식사는 시계에 못 박힌다');
+  const day = buildCourseSkeleton({ startTime: '12:00', endTime: '21:00' });
+  check('12~21시는 점심으로 시작한다', day.slots[0].label, '점심');
+  check('점심은 12:00에 시작한다', day.slots[0].startTime, '12:00');
+  check(
+    '저녁은 창 끝에서 역산해 여유를 남긴다',
+    day.slots.filter(slot => slot.label === '저녁').map(slot => `${slot.startTime}-${slot.endTime}`),
+    ['18:50-20:20']
+  );
+  check('마지막은 여유로 끝난다', day.slots.at(-1).label, '여유');
+  check('갈 곳은 4~5군데다', day.placeSlotCount >= 4 && day.placeSlotCount <= 5, true);
+
+  section('[코스/골격] 늦게 시작하면 점심을 넣지 않는다');
+  check('15시 시작에는 점심이 없다', labelsOf(buildCourseSkeleton({ startTime: '15:00', endTime: '20:00' })).includes('점심'), false);
+  check('15시 시작에도 저녁은 있다', labelsOf(buildCourseSkeleton({ startTime: '15:00', endTime: '20:00' })).includes('저녁'), true);
+  check('창이 짧으면 식사 하나로 끝난다', buildCourseSkeleton({ startTime: '13:00', endTime: '15:00' }).placeSlotCount, 1);
+
+  section('[코스/골격] 시간표에 구멍도 겹침도 없다');
+  // 이건 눈으로 못 잡는다. 처음 손으로 확인한 6개 케이스는 전부 멀쩡했는데
+  // 전수 검사에서 2046개 중 481개가 깨져 있었다.
+  let broken = 0;
+  let outsideService = 0;
+  let longestBuffer = 0;
+  let checked = 0;
+  for (let start = 0; start <= 23 * 60 + 45; start += 15) {
+    for (let width = 90; width <= 14 * 60; width += 15) {
+      const end = start + width;
+      if (end > 24 * 60) continue;
+      const skeleton = buildCourseSkeleton({
+        startTime: minutesToTime(start),
+        endTime: minutesToTime(end)
+      });
+      if (skeleton.error) continue;
+      checked += 1;
+
+      let cursor = skeleton.startMinutes;
+      let ok = true;
+      for (const slot of skeleton.slots) {
+        if (slot.startMinutes !== cursor || slot.endMinutes <= slot.startMinutes) {
+          ok = false;
+          break;
+        }
+        if (slot.kind === 'buffer') {
+          longestBuffer = Math.max(longestBuffer, slot.endMinutes - slot.startMinutes);
+        }
+        if (
+          slot.placeKinds.length > 0 &&
+          (slot.startMinutes < SERVICE_START_MINUTES || slot.endMinutes > SERVICE_END_MINUTES)
+        ) {
+          outsideService += 1;
+        }
+        cursor = slot.endMinutes;
+      }
+      if (!ok || cursor !== skeleton.endMinutes) broken += 1;
+    }
+  }
+  check('검사한 시간 창이 2000개를 넘는다', checked > 2000, true);
+  check('구멍·겹침이 하나도 없다', broken, 0);
+  check('문 여는 시간 밖에 장소를 넣지 않는다', outsideService, 0);
+  check('빈 시간이 1시간을 넘지 않는다', longestBuffer <= 60, true);
+
+  section('[코스/골격] 문 연 곳이 없는 시간대는 잘라낸다');
+  const early = buildCourseSkeleton({ startTime: '06:00', endTime: '21:00' });
+  check('06시 시작은 08시로 당겨진다', early.slots[0].startTime, '08:00');
+  check('사용자가 넣은 시각은 그대로 돌려준다', early.requestedStartMinutes, 6 * 60);
+  check('잘랐다는 걸 문장으로 알려준다', Boolean(early.note), true);
+  check('새벽만 잡으면 거절한다', Boolean(buildCourseSkeleton({ startTime: '02:00', endTime: '06:00' }).error), true);
+  check('창이 너무 짧으면 거절한다', Boolean(buildCourseSkeleton({ startTime: '12:00', endTime: '13:00' }).error), true);
+
+  section('[코스/날씨] 하루가 아니라 시간대로 판정한다');
+  const rainy = applyWeatherToSkeleton(
+    day.slots,
+    Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      precipitationProbability: hour >= 17 ? 80 : 10,
+      temperature: 22
+    }))
+  );
+  check(
+    '비 오기 전 슬롯은 그대로다',
+    rainy.filter(slot => slot.endMinutes <= 17 * 60 && slot.weatherNote).length,
+    0
+  );
+  check(
+    '비 오는 시간대 슬롯만 실내로 바뀐다',
+    rainy.filter(slot => slot.weatherNote).length > 0,
+    true
+  );
+  check(
+    '예보가 없으면 아무것도 바꾸지 않는다',
+    applyWeatherToSkeleton(day.slots, []).filter(slot => slot.weatherNote).length,
+    0
+  );
+
+  const walkDay = buildCourseSkeleton({ startTime: '18:00', endTime: '22:00' });
+  const walkSlot = walkDay.slots.find(slot => slot.kind === 'walk');
+  const swapped = applyWeatherToSkeleton(
+    walkDay.slots,
+    Array.from({ length: 24 }, (_, hour) => ({ hour, precipitationProbability: 90, temperature: 20 }))
+  ).find(slot => slot.index === walkSlot.index);
+  check('산책 슬롯은 종류 자체가 실내로 바뀐다', swapped.kind, 'activity');
+  check('바꾼 이유를 사용자에게 보여줄 문장으로 남긴다', Boolean(swapped.weatherNote), true);
+}
+
+// ------------------------------------------------------------------- 영업시간
+async function testOpeningHours() {
+  const { parseOpeningHours, isOpenDuring, serializeOpeningHours } = await bundle(
+    'shared/openingHours.ts',
+    'opening_hours.mjs'
+  );
+
+  section('[영업시간] 읽을 수 있는 것만 읽는다');
+  check('단순 범위를 읽는다', parseOpeningHours('10:00~22:00').weekly[1], [{ openMinutes: 600, closeMinutes: 1320 }]);
+  check('공백·물결 표기가 달라도 읽는다', parseOpeningHours('11시30분 - 21시00분').parsed, true);
+  check('24시간을 알아본다', parseOpeningHours('24시간 영업').alwaysOpen, true);
+  check('HTML 태그를 걷어낸다', parseOpeningHours('<b>09:00~18:00</b>').parsed, true);
+  check('심야 영업은 다음 날로 넘긴다', parseOpeningHours('18:00~02:00').weekly[0][0].closeMinutes, 26 * 60);
+
+  section('[영업시간] 반쯤 읽느니 모른다고 한다');
+  // 평일 시간을 주말에도 적용하면 일요일에 닫힌 가게를 열려 있다고 말하게 된다.
+  check('요일마다 다르면 읽지 않는다', parseOpeningHours('평일 09:00~18:00, 주말 10:00~17:00').parsed, false);
+  check('계절마다 다르면 읽지 않는다', parseOpeningHours('하절기 09:00~19:00 동절기 09:00~18:00').parsed, false);
+  check('못 읽어도 원문은 남긴다', parseOpeningHours('평일 09:00~18:00').raw, '평일 09:00~18:00');
+  check('시간 표기가 아니면 읽지 않는다', parseOpeningHours('연중무휴').parsed, false);
+
+  section('[영업시간] 모름은 열림이 아니다');
+  // 이 세 줄이 이 파일의 존재 이유다. 1,364건 전부 영업시간이 NULL인 상태에서
+  // 모름을 열림으로 접으면 닫힌 가게로 사람을 보내는 코스가 나온다.
+  check('데이터가 없으면 unknown', isOpenDuring(null, 1, 720, 780), 'unknown');
+  check('못 읽은 원문만 있어도 unknown', isOpenDuring(parseOpeningHours('평일만 영업'), 1, 720, 780), 'unknown');
+  const cafe = parseOpeningHours('10:00~22:00');
+  check('영업시간 안이면 open', isOpenDuring(cafe, 1, 720, 780), 'open');
+  check('여는 시각 전이면 closed', isOpenDuring(cafe, 1, 540, 600), 'closed');
+  check('닫는 시각을 넘기면 closed', isOpenDuring(cafe, 1, 1290, 1350), 'closed');
+  // 슬롯 전체가 들어와야 한다. 시작만 보면 닫기 10분 전에 들여보낸다.
+  check('슬롯 끝이 영업시간을 넘으면 closed', isOpenDuring(cafe, 1, 1310, 1340), 'closed');
+  check('24시간은 언제나 open', isOpenDuring(parseOpeningHours('24시간'), 3, 60, 120), 'open');
+
+  section('[영업시간] 저장 형식');
+  check('아무것도 못 읽었으면 NULL로 둔다', serializeOpeningHours(parseOpeningHours('')), null);
+  check('원문만 있어도 저장한다', typeof serializeOpeningHours(parseOpeningHours('평일 09:00~18:00')), 'string');
+}
+
+// --------------------------------------------------------------------- 상권
+async function testAreaConsistency() {
+  const { AREA_OPTIONS, findAreaLabel } = await bundle('shared/areas.ts', 'areas_shared.mjs');
+  const { AREAS } = await import(pathToFileURL(join(root, 'scripts/ingest/areas.mjs')).href);
+
+  section('[상권] 화면 목록과 수집기 목록이 어긋나지 않는다');
+  // 한쪽만 늘리면 고른 동네에 장소가 하나도 없거나, 수집한 동네를 아무도 고를 수 없다.
+  check(
+    '상권 코드가 같다',
+    AREA_OPTIONS.map(area => area.code).sort(),
+    AREAS.map(area => area.code).sort()
+  );
+  check(
+    '라벨도 같다',
+    AREA_OPTIONS.map(area => `${area.code}:${area.label}`).sort(),
+    AREAS.map(area => `${area.code}:${area.label}`).sort()
+  );
+  check('없는 코드는 라벨이 없다', findAreaLabel('busan'), null);
+  check('빈 값도 안전하다', findAreaLabel(null), null);
+}
+
+// --------------------------------------------------------------------- 패싯
+async function testPlaceFacets() {
+  const m = await bundle('shared/placeFacets.ts', 'place_facets.mjs');
+  const names = JSON.parse(readFileSync(join(root, 'scripts/ingest/tourCategories.json'), 'utf8'));
+
+  section('[패싯] 분류 코드 매핑이 실제 코드표와 맞는다');
+  // 코드를 한 글자 틀리면 아무 태그도 안 붙는데 에러도 안 난다. 조용히 비는 게 제일 위험하다.
+  const mapped = [...Object.keys(m.TOUR_CAT3_CUISINE), ...Object.keys(m.TOUR_CAT3_GENRE)];
+  check('없는 코드에 매핑을 걸지 않았다', mapped.filter(code => !names[code]), []);
+  check('공원 코드도 코드표에 있다', m.TOUR_CAT3_PARK.filter(code => !names[code]), []);
+  check(
+    '한 코드가 음식과 활동 양쪽에 있지 않다',
+    Object.keys(m.TOUR_CAT3_CUISINE).filter(code => code in m.TOUR_CAT3_GENRE),
+    []
+  );
+
+  section('[패싯] 두 소스가 같은 어휘로 접힌다');
+  // 이게 이 파일의 존재 이유다. 접히지 않으면 슬롯 채울 때 둘이 영영 안 만난다.
+  check('미술관/화랑 → art', m.facetsFromTourApi({ cat3: 'A02060500' }), ['genre:art']);
+  check('전시/미술 → art', m.facetsFromSeoulCulture({ CODENAME: '전시/미술' }), ['genre:art']);
+  check('한식 → cuisine', m.facetsFromTourApi({ cat3: 'A05020100' }), ['cuisine:korean']);
+  check('카페는 음식 계열이다', m.facetsFromTourApi({ cat3: 'A05020900' }), ['cuisine:cafe']);
+
+  section('[패싯] 모르면 붙이지 않는다');
+  // openingHours가 모름을 열림으로 접지 않는 것과 같은 규칙이다.
+  check('모르는 코드는 빈 배열', m.facetsFromTourApi({ cat3: 'Z99999999' }), []);
+  check('코드가 없어도 안전하다', m.facetsFromTourApi({}), []);
+  check('"기타"는 매핑하지 않는다', m.facetsFromSeoulCulture({ CODENAME: '기타' }), []);
+  check(
+    '요금이 빈값이면 유료로 접지 않는다',
+    m.facetsFromSeoulCulture({ CODENAME: '기타', IS_FREE: '' }),
+    []
+  );
+  check(
+    '무료·유료는 그대로 남긴다',
+    m.facetsFromSeoulCulture({ CODENAME: '연극', THEMECODE: '가족 문화행사', IS_FREE: '유료' }),
+    ['genre:performance', 'audience:family', 'fee:paid']
+  );
+
+  section('[패싯] 다시 돌려도 태그가 불어나지 않는다');
+  // 백필은 여러 번 돌린다. 붙이기만 하면 같은 값이 쌓이고 매핑을 고쳐도 옛 값이 남는다.
+  const once = m.mergeFacets(['음식점'], m.facetsFromTourApi({ cat3: 'A05020100' }));
+  const twice = m.mergeFacets(once, m.facetsFromTourApi({ cat3: 'A05020100' }));
+  check('한 번 돌린 결과', once, ['cuisine:korean', '음식점']);
+  check('두 번 돌려도 같다', twice, once);
+  check(
+    '매핑을 고치면 옛 패싯은 사라진다',
+    m.mergeFacets(['cuisine:korean', '음식점'], ['cuisine:japanese']),
+    ['cuisine:japanese', '음식점']
+  );
+  check('표시용 라벨은 지우지 않는다', m.mergeFacets(['전시/미술', '무료'], []), ['전시/미술', '무료']);
+  check('패싯과 라벨을 구분한다', [m.isFacet('genre:art'), m.isFacet('전시/미술')], [true, false]);
+  check('값만 꺼낼 수 있다', m.facetValues(['genre:art', 'fee:free', '무료'], 'genre'), ['art']);
+
+  section('[패싯] 공원은 A02에 있어도 park이다');
+  // TourAPI는 "공원"을 A02(인문) 밑에 둔다. cat1='A01'만 보면 26곳을 놓치고,
+  // 산책 슬롯이 찾을 수 있는 장소가 서울 전체에서 7곳으로 줄어든다.
+  check(
+    '공원(A02020700)은 park',
+    m.kindFromTourApi({ contenttypeid: '12', cat1: 'A02', cat3: 'A02020700' }),
+    'park'
+  );
+  check('공원은 실외다', m.isIndoorForKind('park'), false);
+  check(
+    '테마공원은 park이 아니다',
+    m.kindFromTourApi({ contenttypeid: '12', cat1: 'A02', cat3: 'A02020600' }),
+    'activity'
+  );
+  check(
+    '자연(A01)은 그대로 park',
+    m.kindFromTourApi({ contenttypeid: '12', cat1: 'A01', cat3: 'A01010400' }),
+    'park'
+  );
+  check(
+    '카페는 cat3로 갈린다',
+    [
+      m.kindFromTourApi({ contenttypeid: '39', cat3: 'A05020900' }),
+      m.kindFromTourApi({ contenttypeid: '39', cat3: 'A05020100' })
+    ],
+    ['cafe', 'restaurant']
+  );
+  check('레포츠는 실내외 미상', m.isIndoorForKind('activity'), null);
+
+  section('[패싯] 수집기를 다시 돌려도 패싯이 날아가지 않는다');
+  // 두 수집기 모두 ON CONFLICT로 tags_json을 통째로 덮어쓴다. seoulCulture는
+  // 주 1회 돌기 때문에, 수집기가 패싯을 안 만들면 매주 백필이 지워진다.
+  for (const [name, file] of [
+    ['tourApi', 'scripts/ingest/tourApi.mjs'],
+    ['seoulCulture', 'scripts/ingest/seoulCulture.mjs']
+  ]) {
+    const source = readFileSync(join(root, file), 'utf8');
+    check(`${name}가 패싯을 만든다`, source.includes('mergeFacets'), true);
+  }
+  check(
+    'tourApi가 kind를 shared에서 가져온다',
+    readFileSync(join(root, 'scripts/ingest/tourApi.mjs'), 'utf8').includes('kindFromTourApi'),
+    true
+  );
+}
+
+function testDatePlanWindowSchema() {
+  const db = join(work, 'plan-window.db');
+  buildSchema(db);
+  seedRoom(db);
+
+  sqlite(
+    db,
+    `INSERT INTO date_plans
+       (id,room_id,created_by,title,scheduled_date,start_time,end_time,origin_area,
+        budget_per_person,status,created_at,updated_at)
+     VALUES ('plan_w','room_ab','mem_a','성수 하루','2026-08-22','12:00','21:00','seongsu',
+             80000,'planned','2026-08-11','2026-08-11');`
+  );
+
+  section('[날짜/시간창] 코스 설정이 약속에 붙는다');
+  check(
+    '시간 창·동네·예산이 한 행에 남는다',
+    sqlite(db, `SELECT start_time || '~' || end_time || ' ' || origin_area || ' ' || budget_per_person FROM date_plans WHERE id='plan_w';`),
+    '12:00~21:00 seongsu 80000'
+  );
+  check(
+    '끝 시각을 안 정한 약속도 그대로 저장된다',
+    sqlite(
+      db,
+      `INSERT INTO date_plans (id,room_id,title,scheduled_date,start_time,status,created_at,updated_at)
+         VALUES ('plan_x','room_ab','미정','2026-08-23','13:00','planned','2026-08-11','2026-08-11');
+       SELECT coalesce(end_time,'(없음)') FROM date_plans WHERE id='plan_x';`
+    ),
+    '(없음)'
+  );
+  check(
+    '다가오는 약속 인덱스가 만들어졌다',
+    sqlite(db, `SELECT count(*) FROM sqlite_master WHERE type='index' AND name='idx_date_plans_window';`),
+    '1'
+  );
+}
+
 try {
   await testOpeningRules();
   await testDateQuestionRules();
@@ -774,6 +1092,11 @@ try {
   await testCloseExpiredRules();
   testRecommendationSchema();
   testDatePlanSchema();
+  await testCourseSkeleton();
+  await testOpeningHours();
+  await testAreaConsistency();
+  await testPlaceFacets();
+  testDatePlanWindowSchema();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

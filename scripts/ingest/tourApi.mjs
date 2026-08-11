@@ -56,12 +56,12 @@ const radiusM = (() => {
 
 // ---------------------------------------------------------------- shared/
 
-function loadShared() {
-  const outfile = join(work, 'placeNormalize.mjs');
+async function bundleShared(name) {
+  const outfile = join(work, `${name}.mjs`);
   execFileSync(
     join(root, 'node_modules/.bin/esbuild'),
     [
-      join(root, 'shared/placeNormalize.ts'),
+      join(root, `shared/${name}.ts`),
       '--bundle',
       '--format=esm',
       '--platform=neutral',
@@ -73,28 +73,18 @@ function loadShared() {
   return import(pathToFileURL(outfile).href);
 }
 
+async function loadShared() {
+  const [normalize, facets] = await Promise.all([
+    bundleShared('placeNormalize'),
+    bundleShared('placeFacets')
+  ]);
+  return { ...normalize, ...facets };
+}
+
 // ---------------------------------------------------------------- 값 변환
 
-/**
- * places.kind. contentTypeId만으로는 카페와 밥집이 안 갈린다.
- * A0502xx가 음식 분류이고 그 안에서 A05020900이 카페·전통찻집이다.
- */
-function toKind(row) {
-  const typeId = String(row.contenttypeid ?? '');
-  const cat3 = String(row.cat3 ?? '');
-  const cat1 = String(row.cat1 ?? '');
-
-  if (typeId === '39') return cat3 === 'A05020900' ? 'cafe' : 'restaurant';
-  if (typeId === '14') return 'exhibition';
-  if (typeId === '12') return cat1 === 'A01' ? 'park' : 'activity'; // A01 = 자연
-  return 'activity'; // 28 레포츠, 38 쇼핑
-}
-
-function toIsIndoor(kind) {
-  if (kind === 'park') return false;
-  if (kind === 'cafe' || kind === 'restaurant' || kind === 'exhibition') return true;
-  return null; // 레포츠·쇼핑은 실내외가 섞여 있다
-}
+// `kind`·실내 여부·패싯은 전부 `shared/placeFacets.ts`에 있다.
+// 여기 두면 회귀 테스트가 못 잡는다 (`03-decisions.md` #28).
 
 // ---------------------------------------------------------------- 수집
 
@@ -166,12 +156,16 @@ function mapRow(row, shared) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { skip: '좌표 없음' };
   if (lat < 37.0 || lat > 38.0 || lng < 126.5 || lng > 127.5) return { skip: '좌표 범위 밖' };
 
-  const kind = toKind(row);
-  const isIndoor = toIsIndoor(kind);
+  const kind = shared.kindFromTourApi(row);
+  const isIndoor = shared.isIndoorForKind(kind);
   const address = [row.addr1, row.addr2].map(part => String(part ?? '').trim()).filter(Boolean).join(' ') || null;
 
-  // 분류 코드는 사람이 못 읽는다. 태그로는 대분류 이름만 남긴다.
-  const tags = [CONTENT_TYPES[Number(row.contenttypeid)]].filter(Boolean);
+  // 분류 코드는 사람이 못 읽는다. 매칭용 패싯과 표시용 대분류 이름을 같이 넣는다.
+  // 패싯이 없으면 이 행의 태그는 kind와 완전히 중복이라 정보량이 0이다 (#28).
+  const tags = shared.mergeFacets(
+    [CONTENT_TYPES[Number(row.contenttypeid)]].filter(Boolean),
+    shared.facetsFromTourApi(row)
+  );
 
   // 가격대와 영업시간은 이 조회에 없다. 소개정보조회(detailIntro2)를 콘텐츠마다
   // 한 번씩 더 불러야 하는데 개발계정 트래픽이 하루 1000이라 지금은 비워둔다.

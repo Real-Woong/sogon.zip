@@ -47,12 +47,12 @@ const radiusM = (() => {
 // ---------------------------------------------------------------- shared/ 번들
 
 /** `shared/`는 TS라 esbuild로 번들해서 부른다. `scripts/test.mjs`와 같은 방식. */
-function loadShared() {
-  const outfile = join(work, 'placeNormalize.mjs');
+async function bundleShared(name) {
+  const outfile = join(work, `${name}.mjs`);
   execFileSync(
     join(root, 'node_modules/.bin/esbuild'),
     [
-      join(root, 'shared/placeNormalize.ts'),
+      join(root, `shared/${name}.ts`),
       '--bundle',
       '--format=esm',
       '--platform=neutral',
@@ -62,6 +62,14 @@ function loadShared() {
     { stdio: ['ignore', 'ignore', 'pipe'] }
   );
   return import(pathToFileURL(outfile).href);
+}
+
+async function loadShared() {
+  const [normalize, facets] = await Promise.all([
+    bundleShared('placeNormalize'),
+    bundleShared('placeFacets')
+  ]);
+  return { ...normalize, ...facets };
 }
 
 // ---------------------------------------------------------------- 값 변환
@@ -237,10 +245,13 @@ function mapRow(row, shared, now) {
   const kind = KIND_BY_CODE[codeName] ?? 'activity';
   const themeCode = String(row.THEMECODE ?? '').trim();
 
-  const tags = [codeName, themeCode]
+  // 원문 라벨은 표시용으로 남기고, 매칭용 패싯을 앞에 붙인다.
+  // 이 스크립트는 주 1회 돌기 때문에 여기서 패싯을 안 넣으면 매주 날아간다 (#28).
+  const labels = [codeName, themeCode]
     .filter(tag => tag.length > 0 && tag !== '기타')
     .filter((tag, at, list) => list.indexOf(tag) === at);
-  if (String(row.IS_FREE ?? '').includes('무료')) tags.push('무료');
+  if (String(row.IS_FREE ?? '').includes('무료')) labels.push('무료');
+  const tags = shared.mergeFacets(labels, shared.facetsFromSeoulCulture(row));
 
   const name = String(row.TITLE ?? '').trim();
   if (name.length === 0) return { skip: '이름 없음' };
