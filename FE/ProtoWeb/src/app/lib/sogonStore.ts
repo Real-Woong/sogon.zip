@@ -4,6 +4,7 @@ import {
   type SogonFileStatus
 } from '../../../../../shared/sogonOpening';
 import type { DateQuestion } from '../../../../../shared/dateQuestions';
+import type { CourseSlot } from '../../../../../shared/dateCourseSkeleton';
 
 export type { SogonFileStatus };
 
@@ -71,15 +72,26 @@ export type UserPreference = {
   createdAt: string;
 };
 
+/** 시간 창만으로 만든 하루 시간표. 장소는 아직 비어 있다. */
+export type DateCourse = {
+  slots: CourseSlot[];
+  placeSlotCount: number;
+  note?: string;
+};
+
 export type DatePlan = {
   id: string;
   title: string;
   scheduledDate: string;
   startTime: string | null;
+  endTime: string | null;
+  originArea: string | null;
+  budgetPerPerson: number | null;
   status: string;
   createdAt: string;
   createdByNickname: string | null;
   createdByMe: boolean;
+  course: DateCourse | null;
 };
 
 export type TodayDateQuestion = {
@@ -540,6 +552,9 @@ export async function createDatePlan(input: {
   title: string;
   scheduledDate: string;
   startTime?: string | null;
+  endTime?: string | null;
+  originArea?: string | null;
+  budgetPerPerson?: number | null;
 }) {
   return apiFetch<{ datePlan: DatePlan }>('/api/date-plans', {
     method: 'POST',

@@ -19,11 +19,14 @@
 
 ## 현재 개발 트랙
 
-데이트 추천 L0 단계다. 장소 데이터 수집 기반은 완료했고, 현재 순서는 다음과 같다.
+데이트 추천 L0 단계다. **하루짜리 코스**를 만드는 쪽으로 방향이 잡혔다
+(`03-decisions.md` #27) — "12:00~21:00"을 받아 시간표를 짠다.
 
 ```text
 날짜 계획·오늘의 질문 (완료)
-  → 추천 생성·노출 로깅
+  → 하루 코스 시간 골격 (완료, 장소는 아직 안 채움)
+  → 영업시간 수집  ← 지금 최대 블로커. 1,364건 전부 NULL이다
+  → 슬롯 채우기 + 노출 로깅
   → 개인별 피드백
   → 두 사람 공유 반응
 ```
@@ -64,6 +67,7 @@ BE/migrations/0001_beta_schema.sql
 BE/migrations/0002_security_and_scheduling.sql
 BE/migrations/0003_recommendation.sql
 BE/migrations/0004_date_plans.sql
+BE/migrations/0005_date_plan_window.sql
 ```
 
 실행 명령과 주의 사항은 [`BETA_DEPLOY.md`](./BETA_DEPLOY.md)를 따른다.

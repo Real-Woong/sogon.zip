@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Check, Clock3, HeartHandshake, Plus, Sparkles } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  Clock3,
+  Coffee,
+  Footprints,
+  HeartHandshake,
+  MapPin,
+  Plus,
+  Sparkles,
+  Ticket,
+  UtensilsCrossed,
+  Wallet
+} from 'lucide-react';
 import {
   answerTodayDateQuestion,
   createDatePlan,
@@ -9,7 +22,53 @@ import {
   type TodayDateQuestion
 } from '../lib/sogonStore';
 import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
+import {
+  buildCourseSkeleton,
+  type CourseSlot,
+  type CourseSlotKind
+} from '../../../../../shared/dateCourseSkeleton';
+import { AREA_OPTIONS, findAreaLabel } from '../../../../../shared/areas';
 import { ScreenHeader } from './shared/ScreenHeader';
+
+const SLOT_ICON: Record<CourseSlotKind, typeof Coffee> = {
+  meal: UtensilsCrossed,
+  cafe: Coffee,
+  activity: Ticket,
+  walk: Footprints,
+  transit: Footprints,
+  buffer: Clock3
+};
+
+/** 시간표 한 줄. 장소가 아직 없으므로 무엇을 채울 자리인지만 보여준다. */
+function CourseTimeline({ slots }: { slots: CourseSlot[] }) {
+  return (
+    <ol className="mt-3 space-y-1.5">
+      {slots.map(slot => {
+        const Icon = SLOT_ICON[slot.kind];
+        const isGap = slot.placeKinds.length === 0;
+        return (
+          <li
+            key={slot.index}
+            className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs ${
+              isGap
+                ? 'text-[color:var(--gray)]'
+                : 'bg-[color:var(--gray-light)] font-bold text-[color:var(--navy)]'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="w-[86px] shrink-0 tabular-nums">
+              {slot.startTime}–{slot.endTime}
+            </span>
+            <span className="min-w-0 flex-1 break-keep">{slot.label}</span>
+            {slot.weatherNote ? (
+              <span className="shrink-0 text-[10px] text-[color:var(--coral-deep)]">날씨</span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 function dateLabel(value: string) {
   const date = new Date(`${value}T00:00:00+09:00`);
@@ -27,12 +86,22 @@ export function DatePlansScreen() {
   const [title, setTitle] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [originArea, setOriginArea] = useState('');
+  const [budget, setBudget] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [answeringOption, setAnsweringOption] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const minDate = useMemo(() => dateKeyInTimeZone(), []);
+
+  // 저장하기 전에 시간표를 보여준다. "12시부터 9시까지"가 실제로 어떤 하루가
+  // 되는지 눈으로 본 다음 저장하는 것과, 저장하고 나서 보는 것은 다르다.
+  const previewCourse = useMemo(
+    () => (startTime ? buildCourseSkeleton({ startTime, endTime: endTime || null }) : null),
+    [startTime, endTime]
+  );
 
   const load = async () => {
     setIsLoading(true);
@@ -65,11 +134,17 @@ export function DatePlansScreen() {
       await createDatePlan({
         title: title.trim(),
         scheduledDate,
-        startTime: startTime || null
+        startTime: startTime || null,
+        endTime: endTime || null,
+        originArea: originArea || null,
+        budgetPerPerson: budget ? Number(budget) : null
       });
       setTitle('');
       setScheduledDate('');
       setStartTime('');
+      setEndTime('');
+      setOriginArea('');
+      setBudget('');
       await load();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '약속을 저장하지 못했어요.');
@@ -184,7 +259,7 @@ export function DatePlansScreen() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">시간 선택</span>
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">시작</span>
                 <input
                   type="time"
                   value={startTime}
@@ -193,6 +268,67 @@ export function DatePlansScreen() {
                 />
               </label>
             </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">끝나는 시간</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  disabled={!startTime}
+                  onChange={event => setEndTime(event.target.value)}
+                  className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-3 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)] disabled:bg-[color:var(--gray-light)]"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">만나는 동네</span>
+                <select
+                  value={originArea}
+                  onChange={event => setOriginArea(event.target.value)}
+                  className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-3 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
+                >
+                  <option value="">아직</option>
+                  {AREA_OPTIONS.map(area => (
+                    <option key={area.code} value={area.code}>{area.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">1인 예산</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={10000}
+                  value={budget}
+                  onChange={event => setBudget(event.target.value)}
+                  placeholder="원"
+                  className="w-full rounded-2xl border border-[color:var(--border)] bg-white px-3 py-3 text-sm text-[color:var(--navy)] outline-none focus:ring-2 focus:ring-[color:var(--lavender)]"
+                />
+              </label>
+            </div>
+
+            {previewCourse ? (
+              previewCourse.error ? (
+                <p className="rounded-2xl bg-[color:var(--blush)] px-4 py-3 text-xs font-bold text-[color:var(--coral-deep)]">
+                  {previewCourse.error}
+                </p>
+              ) : (
+                <div className="rounded-2xl bg-[color:var(--cream)] p-3">
+                  <p className="text-xs font-black text-[color:var(--navy)]">
+                    이렇게 흘러가요 · 갈 곳 {previewCourse.placeSlotCount}군데
+                  </p>
+                  {previewCourse.note ? (
+                    <p className="mt-1 text-[11px] text-[color:var(--coral-deep)]">{previewCourse.note}</p>
+                  ) : null}
+                  <CourseTimeline slots={previewCourse.slots} />
+                  <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--gray)]">
+                    아직 장소는 안 정해졌어요. 어떤 자리를 채울지만 잡아둔 거예요.
+                  </p>
+                </div>
+              )
+            ) : null}
+
             <button
               type="button"
               disabled={!title.trim() || !scheduledDate || isSaving}
@@ -236,12 +372,36 @@ export function DatePlansScreen() {
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--gray)]">
                         {plan.startTime ? (
-                          <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{plan.startTime}</span>
+                          <span className="flex items-center gap-1">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            {plan.startTime}
+                            {plan.endTime ? `–${plan.endTime}` : ''}
+                          </span>
+                        ) : null}
+                        {findAreaLabel(plan.originArea) ? (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {findAreaLabel(plan.originArea)}
+                          </span>
+                        ) : null}
+                        {plan.budgetPerPerson ? (
+                          <span className="flex items-center gap-1">
+                            <Wallet className="h-3.5 w-3.5" />
+                            1인 {plan.budgetPerPerson.toLocaleString('ko-KR')}원
+                          </span>
                         ) : null}
                         <span>{plan.createdByMe ? '내가 정한 약속' : `${plan.createdByNickname ?? '상대'}님이 정한 약속`}</span>
                       </div>
                     </div>
                   </div>
+                  {plan.course ? (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs font-black text-[color:var(--coral-deep)]">
+                        이날 시간표 보기 · 갈 곳 {plan.course.placeSlotCount}군데
+                      </summary>
+                      <CourseTimeline slots={plan.course.slots} />
+                    </details>
+                  ) : null}
                 </article>
               ))}
             </div>

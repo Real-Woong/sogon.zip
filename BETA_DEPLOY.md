@@ -1,6 +1,6 @@
 # Sogon.zip Free Beta Deployment
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 목표: 돈 한 푼 들이지 않고 친구 3명에게 현재 Sogon.zip 웹 프로토타입을 베타 링크로 공유한다.
 
@@ -42,16 +42,21 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0001_beta_sch
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security_and_scheduling.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0003_recommendation.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0004_date_plans.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0005_date_plan_window.sql
 ```
 
 `--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
+
+`0005`는 2026-08-11에 프로덕션에 적용했다. 앞으로 컬럼을 추가하는 마이그레이션은
+**항상 코드보다 먼저** 넣는다. 순서를 바꾸면 새 컬럼을 SELECT/INSERT하는 API가
+통째로 500이 난다.
 
 `0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
 날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는
 추천 생성 API는 아직 없다. 설계 배경은
 `docs/reference/recommendation/date-recommendation-v2-ai.md` 참고.
 
-`0002`와 `0004`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
+`0002`·`0004`·`0005`는 `ALTER TABLE ... ADD COLUMN`을 쓰기 때문에 **두 번 실행하면 실패한다.** 한 번만 실행한다.
 
 `0002` 적용 후 기존 로그인 세션은 모두 무효가 된다. 이미 가입한 친구가 있다면
 다시 로그인해달라고 알려준다. 비밀번호는 그대로 쓸 수 있고, 로그인하는 순간
