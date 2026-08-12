@@ -15,12 +15,13 @@ import {
 } from 'lucide-react';
 import {
   getConnectionRequests,
+  getCorePreferences,
   getDatePlans,
   getSogonFiles,
   getTodayDateQuestion,
-  getUserPreferences,
   syncRemoteData,
   type ConnectionRequest,
+  type CorePreferenceStatus,
   type DatePlan
 } from '../lib/sogonStore';
 import { useSession } from '../lib/session';
@@ -31,15 +32,17 @@ export function HomeScreen() {
   // 화면마다 연결 상태가 어긋난다.
   const { profile, refresh } = useSession();
   const [files, setFiles] = useState(() => getSogonFiles());
-  const [preferences, setPreferences] = useState(() => getUserPreferences());
   const [incomingRequests, setIncomingRequests] = useState<ConnectionRequest[]>([]);
   const [datePlans, setDatePlans] = useState<DatePlan[]>([]);
   const [hasTodayQuestion, setHasTodayQuestion] = useState(false);
+  const [corePreferences, setCorePreferences] = useState<CorePreferenceStatus | null>(null);
   const myFiles = files.filter(file => file.isMine !== false);
   const upcomingCount = myFiles.filter(file => file.status === 'scheduled').length;
   const readyCount = myFiles.filter(file => file.status === 'ready').length;
   const openedCount = files.filter(file => file.status === 'opened').length;
-  const preferenceProgress = Math.min(100, preferences.length * 20);
+  const preferenceProgress = corePreferences
+    ? Math.round((corePreferences.answeredCount / corePreferences.total) * 100)
+    : 0;
   const isConnected = Boolean(profile?.isConnected);
   const coupleLabel = profile?.partnerNickname
     ? `${profile.nickname} x ${profile.partnerNickname}`
@@ -53,7 +56,6 @@ export function HomeScreen() {
     syncRemoteData()
       .then(() => {
         setFiles(getSogonFiles());
-        setPreferences(getUserPreferences());
       })
       .catch(() => undefined);
 
@@ -68,6 +70,12 @@ export function HomeScreen() {
     getTodayDateQuestion()
       .then(data => setHasTodayQuestion(Boolean(data.todayQuestion?.answeredOptionId === null)))
       .catch(() => undefined);
+
+    if (profile?.isConnected) {
+      getCorePreferences()
+        .then(data => setCorePreferences(data.corePreferences))
+        .catch(() => undefined);
+    }
     // 화면에 들어올 때 한 번만 확인한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -139,6 +147,38 @@ export function HomeScreen() {
         </div>
 
         <div className="space-y-5 px-6 pb-6">
+          {isConnected && !corePreferences?.coupleReady ? (
+            <section aria-labelledby="core-preference-title" className="mx-auto w-full max-w-[366px]">
+              <button
+                type="button"
+                onClick={() => navigate('/core-preferences')}
+                className="flex w-full items-center gap-4 rounded-[1.75rem] bg-white p-5 text-left shadow-[0_14px_34px_rgba(223,100,127,0.16)] ring-1 ring-[color:var(--pink)]/65 transition-transform hover:-translate-y-0.5"
+              >
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p id="core-preference-title" className="break-keep font-black leading-snug text-[color:var(--navy)]">
+                    아직 완벽한 추천을 못 해줘요 ㅠㅠ
+                  </p>
+                  <p className="mt-1 break-keep text-sm font-bold text-[color:var(--coral-deep)]">
+                    당신의 취향을 공유해줄래요?
+                  </p>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[color:var(--gray-light)]">
+                    <div className="h-full rounded-full bg-[color:var(--coral)]" style={{ width: `${preferenceProgress}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-[11px] font-bold text-[color:var(--gray)]">
+                    내 답변 {corePreferences?.answeredCount ?? 0}/{corePreferences?.total ?? 20}
+                    {corePreferences?.complete && corePreferences.partner
+                      ? ` · ${corePreferences.partner.nickname}님 ${corePreferences.partner.answeredCount}/${corePreferences.total}`
+                      : ''}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+              </button>
+            </section>
+          ) : null}
+
           {isConnected ? (
             <section aria-labelledby="date-plan-title" className="mx-auto w-full max-w-[366px]">
               <button
@@ -254,8 +294,8 @@ export function HomeScreen() {
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/65">
-                <span>내 취향 {preferences.length}개</span>
-                <span>{isConnected ? '상대 연결됨' : '상대 연결 필요'}</span>
+                <span>핵심 취향 {corePreferences?.answeredCount ?? 0}/{corePreferences?.total ?? 20}</span>
+                <span>{corePreferences?.coupleReady ? '둘 다 완료' : '답변 필요'}</span>
               </div>
               <div className="mb-3 h-2 overflow-hidden rounded-full bg-white/15">
                 <div

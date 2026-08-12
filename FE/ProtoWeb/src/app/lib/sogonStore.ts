@@ -5,6 +5,7 @@ import {
 } from '../../../../../shared/sogonOpening';
 import type { DateQuestion } from '../../../../../shared/dateQuestions';
 import type { CourseSlot } from '../../../../../shared/dateCourseSkeleton';
+import type { CorePreferenceQuestion } from '../../../../../shared/corePreferences';
 
 export type { SogonFileStatus };
 
@@ -82,6 +83,7 @@ export type CoursePlace = {
   endsAt: string | null;
   openState: 'open' | 'closed' | 'unknown';
   caution: string | null;
+  preferenceReason: string | null;
 };
 
 export type DateCourseSlot = CourseSlot & { place?: CoursePlace | null };
@@ -90,7 +92,24 @@ export type DateCourse = {
   slots: DateCourseSlot[];
   placeSlotCount: number;
   filledPlaceCount: number;
+  preferenceReady: boolean;
+  preferenceCompletedMembers: number;
+  preferenceRequiredMembers: number;
   note?: string;
+};
+
+export type CorePreferenceStatus = {
+  questions: readonly CorePreferenceQuestion[];
+  answers: Record<string, string>;
+  total: number;
+  answeredCount: number;
+  complete: boolean;
+  partner: {
+    nickname: string;
+    answeredCount: number;
+    complete: boolean;
+  } | null;
+  coupleReady: boolean;
 };
 
 export type DatePlan = {
@@ -554,6 +573,22 @@ export async function saveUserPreference(input: Omit<UserPreference, 'id' | 'cre
   };
   writeJson(preferencesKey, [preference, ...getUserPreferences()]);
   return preference;
+}
+
+// -- 핵심 취향 질문 ---------------------------------------------------------
+
+export async function getCorePreferences() {
+  return apiFetch<{ corePreferences: CorePreferenceStatus }>('/api/core-preferences');
+}
+
+export async function saveCorePreferenceAnswer(input: {
+  questionId: string;
+  optionId: string;
+}) {
+  return apiFetch<{ corePreferences: CorePreferenceStatus }>('/api/core-preferences', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
 }
 
 // -- 데이트 약속 / 오늘의 질문 ---------------------------------------------

@@ -2,9 +2,11 @@ import { dateKeyInTimeZone, isDateKey } from '../../../../shared/dateQuestions';
 import { buildCourseSkeleton } from '../../../../shared/dateCourseSkeleton';
 import {
   fillCourseWithPlaces,
-  type CoursePlaceCandidate
+  type CoursePlaceCandidate,
+  type CoursePreferenceSignal
 } from '../../../../shared/dateCoursePlaces';
 import { isPlaceKind } from '../../../../shared/placeNormalize';
+import { CORE_PREFERENCE_TOTAL } from '../../../../shared/corePreferences';
 import { all, Env, handle, json, newId, readJson, requireMember } from '../_shared';
 
 type DatePlanRow = {
@@ -45,6 +47,17 @@ type PlaceRow = {
   info_confidence: number;
 };
 
+type PreferenceSignalRow = {
+  member_id: string;
+  tag: string;
+  weight: number;
+};
+
+type PreferenceProgressRow = {
+  member_id: string;
+  answer_count: number;
+};
+
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 /** 1인 예산 상한. 100만원을 넘기면 입력 실수로 본다. */
@@ -80,7 +93,10 @@ function toCandidate(row: PlaceRow): CoursePlaceCandidate | null {
 function toDatePlan(
   row: DatePlanRow,
   viewerId: string,
-  candidates: readonly CoursePlaceCandidate[] = []
+  candidates: readonly CoursePlaceCandidate[] = [],
+  preferenceSignals: readonly CoursePreferenceSignal[] = [],
+  preferenceReady = false,
+  preferenceCompletedMembers = 0
 ) {
   // 시간 창과 동네가 정해졌을 때만 실제 장소를 넣는다. 동네가 없는데 서울 전체에서
   // 하나를 고르면 이동시간 15분이라는 골격과 모순된다.
@@ -91,9 +107,12 @@ function toDatePlan(
     ? fillCourseWithPlaces({
         slots: skeleton.slots,
         candidates: row.origin_area
-          ? candidates.filter(candidate => candidate.areaCode === row.origin_area)
+          ? preferenceReady
+            ? candidates.filter(candidate => candidate.areaCode === row.origin_area)
+            : []
           : [],
-        scheduledDate: row.scheduled_date
+        scheduledDate: row.scheduled_date,
+        preferenceSignals
       })
     : [];
 
@@ -114,6 +133,9 @@ function toDatePlan(
           slots,
           placeSlotCount: skeleton.placeSlotCount,
           filledPlaceCount: slots.filter(slot => slot.place).length,
+          preferenceReady,
+          preferenceCompletedMembers,
+          preferenceRequiredMembers: 2,
           note: skeleton.note
         }
       : null
@@ -140,7 +162,33 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
       ORDER BY p.scheduled_date ASC, p.start_time ASC, p.created_at ASC`
   ).bind(member.room_id, today));
 
-  const areas = [...new Set(rows.map(row => row.origin_area).filter((area): area is string => Boolean(area)))];
+  const [progress, signalRows] = await Promise.all([
+    all<PreferenceProgressRow>(env.DB.prepare(
+      `SELECT m.id AS member_id, COUNT(a.id) AS answer_count
+         FROM members m
+         LEFT JOIN core_preference_answers a ON a.member_id = m.id
+        WHERE m.room_id = ?
+        GROUP BY m.id`
+    ).bind(member.room_id)),
+    all<PreferenceSignalRow>(env.DB.prepare(
+      `SELECT member_id, tag, weight
+         FROM preference_signals
+        WHERE room_id = ? AND is_hard_constraint = 0`
+    ).bind(member.room_id))
+  ]);
+  const preferenceCompletedMembers = progress.filter(
+    item => item.answer_count >= CORE_PREFERENCE_TOTAL
+  ).length;
+  const preferenceReady = progress.length === 2 && preferenceCompletedMembers === 2;
+  const preferenceSignals: CoursePreferenceSignal[] = signalRows.map(row => ({
+    memberId: row.member_id,
+    tag: row.tag,
+    weight: row.weight
+  }));
+
+  const areas = preferenceReady
+    ? [...new Set(rows.map(row => row.origin_area).filter((area): area is string => Boolean(area)))]
+    : [];
   let candidates: CoursePlaceCandidate[] = [];
   if (areas.length > 0) {
     const placeholders = areas.map(() => '?').join(', ');
@@ -157,7 +205,16 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
     candidates = placeRows.map(toCandidate).filter((item): item is CoursePlaceCandidate => Boolean(item));
   }
 
-  return json({ datePlans: rows.map(row => toDatePlan(row, member.id, candidates)) });
+  return json({
+    datePlans: rows.map(row => toDatePlan(
+      row,
+      member.id,
+      candidates,
+      preferenceSignals,
+      preferenceReady,
+      preferenceCompletedMembers
+    ))
+  });
 });
 
 export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env }) => {

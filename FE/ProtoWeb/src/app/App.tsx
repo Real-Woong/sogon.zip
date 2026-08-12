@@ -12,6 +12,7 @@ import { RecommendationZip } from './components/RecommendationZip';
 import { RecordCalendar } from './components/RecordCalendar';
 import { PlusPlanModal } from './components/PlusPlanModal';
 import { DatePlansScreen } from './components/DatePlansScreen';
+import { CorePreferencesScreen } from './components/CorePreferencesScreen';
 import { RedirectIfAuthed, RedirectIfConnected, RequireAuth, SessionProvider } from './lib/session';
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="/received" element={<ReceivedFile />} />
                 <Route path="/recommendation" element={<RecommendationZip />} />
                 <Route path="/date-plans" element={<DatePlansScreen />} />
+                <Route path="/core-preferences" element={<CorePreferencesScreen />} />
                 <Route path="/record" element={<RecordCalendar />} />
                 <Route path="/plus" element={<PlusPlanModal />} />
               </Route>
