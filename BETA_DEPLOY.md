@@ -1,6 +1,6 @@
 # Sogon.zip Free Beta Deployment
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 목표: 돈 한 푼 들이지 않고 친구 3명에게 현재 Sogon.zip 웹 프로토타입을 베타 링크로 공유한다.
 
@@ -57,7 +57,7 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0007_date_pla
 배포하기 전에 반드시 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
 
 `0007`은 사용자가 새 약속에서 직접 고른 데이트 흐름 순서를 저장한다. 해당 UI와 API를
-배포하기 전에 먼저 적용한다.
+배포하기 전에 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
 
 `0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
 날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는
