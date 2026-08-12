@@ -5,6 +5,7 @@ import {
 } from '../../../../../shared/sogonOpening';
 import type { DateQuestion } from '../../../../../shared/dateQuestions';
 import type { CourseSlot } from '../../../../../shared/dateCourseSkeleton';
+import type { CustomCourseKind } from '../../../../../shared/dateCourseSkeleton';
 import type { CorePreferenceQuestion } from '../../../../../shared/corePreferences';
 
 export type { SogonFileStatus };
@@ -120,6 +121,7 @@ export type DatePlan = {
   endTime: string | null;
   originArea: string | null;
   budgetPerPerson: number | null;
+  coursePattern: CustomCourseKind[] | null;
   status: string;
   createdAt: string;
   createdByNickname: string | null;
@@ -604,6 +606,7 @@ export async function createDatePlan(input: {
   endTime?: string | null;
   originArea?: string | null;
   budgetPerPerson?: number | null;
+  coursePattern?: CustomCourseKind[] | null;
 }) {
   return apiFetch<{ datePlan: DatePlan }>('/api/date-plans', {
     method: 'POST',

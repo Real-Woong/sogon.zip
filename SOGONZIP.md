@@ -70,6 +70,7 @@ BE/migrations/0003_recommendation.sql
 BE/migrations/0004_date_plans.sql
 BE/migrations/0005_date_plan_window.sql
 BE/migrations/0006_core_preference_answers.sql
+BE/migrations/0007_date_plan_course_pattern.sql
 ```
 
 실행 명령과 주의 사항은 [`BETA_DEPLOY.md`](./BETA_DEPLOY.md)를 따른다.

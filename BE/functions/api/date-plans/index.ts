@@ -1,5 +1,10 @@
 import { dateKeyInTimeZone, isDateKey } from '../../../../shared/dateQuestions';
-import { buildCourseSkeleton } from '../../../../shared/dateCourseSkeleton';
+import {
+  buildCourseSkeleton,
+  buildCustomCourseSkeleton,
+  isCustomCourseKind,
+  type CustomCourseKind
+} from '../../../../shared/dateCourseSkeleton';
 import {
   fillCourseWithPlaces,
   type CoursePlaceCandidate,
@@ -17,6 +22,7 @@ type DatePlanRow = {
   end_time: string | null;
   origin_area: string | null;
   budget_per_person: number | null;
+  course_pattern_json: string | null;
   status: string;
   created_at: string;
   created_by: string | null;
@@ -30,6 +36,7 @@ type CreateDatePlanInput = {
   endTime?: string | null;
   originArea?: string | null;
   budgetPerPerson?: number | null;
+  coursePattern?: CustomCourseKind[] | null;
 };
 
 type PlaceRow = {
@@ -62,6 +69,24 @@ const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 /** 1인 예산 상한. 100만원을 넘기면 입력 실수로 본다. */
 const MAX_BUDGET_PER_PERSON = 1_000_000;
+
+function parseCoursePattern(value: string | null): CustomCourseKind[] | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every(isCustomCourseKind) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildPlanSkeleton(row: Pick<DatePlanRow, 'start_time' | 'end_time' | 'course_pattern_json'>) {
+  if (!row.start_time) return null;
+  const pattern = parseCoursePattern(row.course_pattern_json);
+  return pattern
+    ? buildCustomCourseSkeleton({ startTime: row.start_time, endTime: row.end_time, pattern })
+    : buildCourseSkeleton({ startTime: row.start_time, endTime: row.end_time });
+}
 
 function parseTags(value: string) {
   try {
@@ -100,9 +125,7 @@ function toDatePlan(
 ) {
   // 시간 창과 동네가 정해졌을 때만 실제 장소를 넣는다. 동네가 없는데 서울 전체에서
   // 하나를 고르면 이동시간 15분이라는 골격과 모순된다.
-  const skeleton = row.start_time
-    ? buildCourseSkeleton({ startTime: row.start_time, endTime: row.end_time })
-    : null;
+  const skeleton = buildPlanSkeleton(row);
   const slots = skeleton && !skeleton.error
     ? fillCourseWithPlaces({
         slots: skeleton.slots,
@@ -124,6 +147,7 @@ function toDatePlan(
     endTime: row.end_time,
     originArea: row.origin_area,
     budgetPerPerson: row.budget_per_person,
+    coursePattern: parseCoursePattern(row.course_pattern_json),
     status: row.status,
     createdAt: row.created_at,
     createdByNickname: row.creator_nickname,
@@ -136,7 +160,7 @@ function toDatePlan(
           preferenceReady,
           preferenceCompletedMembers,
           preferenceRequiredMembers: 2,
-          note: skeleton.note
+          note: 'note' in skeleton ? skeleton.note : undefined
         }
       : null
   };
@@ -152,7 +176,7 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
   const today = dateKeyInTimeZone();
   const rows = await all<DatePlanRow>(env.DB.prepare(
     `SELECT p.id, p.title, p.scheduled_date, p.start_time, p.end_time, p.origin_area,
-            p.budget_per_person, p.status, p.created_at,
+            p.budget_per_person, p.course_pattern_json, p.status, p.created_at,
             p.created_by, m.nickname AS creator_nickname
        FROM date_plans p
        LEFT JOIN members m ON m.id = p.created_by
@@ -234,6 +258,7 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
     typeof input.budgetPerPerson === 'number' && Number.isFinite(input.budgetPerPerson)
       ? Math.round(input.budgetPerPerson)
       : null;
+  const coursePattern = input.coursePattern ?? null;
 
   if (!title) {
     return json({ error: '어떤 약속인지 이름을 적어주세요.' }, { status: 400 });
@@ -256,11 +281,24 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
   if (endTime && !startTime) {
     return json({ error: '시작 시간을 먼저 정해주세요.' }, { status: 400 });
   }
+  if (coursePattern !== null && (
+    !Array.isArray(coursePattern) ||
+    coursePattern.length < 1 ||
+    coursePattern.length > 8 ||
+    !coursePattern.every(isCustomCourseKind)
+  )) {
+    return json({ error: '데이트 흐름을 다시 골라주세요.' }, { status: 400 });
+  }
+  if (coursePattern && (!startTime || !endTime)) {
+    return json({ error: '직접 구성한 흐름을 저장하려면 시작과 끝 시간을 모두 정해주세요.' }, { status: 400 });
+  }
 
   // 시간 창을 둘 다 넣었으면 실제로 코스가 나오는 창인지 여기서 확인한다.
   // 화면에서만 막으면 저장은 되고 코스만 안 나오는 약속이 남는다.
   if (startTime && endTime) {
-    const window = buildCourseSkeleton({ startTime, endTime });
+    const window = coursePattern
+      ? buildCustomCourseSkeleton({ startTime, endTime, pattern: coursePattern })
+      : buildCourseSkeleton({ startTime, endTime });
     if (window.error) {
       return json({ error: window.error }, { status: 400 });
     }
@@ -282,6 +320,7 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
     end_time: endTime,
     origin_area: originArea,
     budget_per_person: budgetPerPerson,
+    course_pattern_json: coursePattern ? JSON.stringify(coursePattern) : null,
     status: 'planned',
     created_at: now,
     created_by: member.id,
@@ -291,8 +330,8 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
   await env.DB.prepare(
     `INSERT INTO date_plans
       (id, room_id, created_by, title, scheduled_date, start_time, end_time,
-       origin_area, budget_per_person, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?)`
+       origin_area, budget_per_person, course_pattern_json, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?)`
   ).bind(
     row.id,
     member.room_id,
@@ -303,6 +342,7 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
     row.end_time,
     row.origin_area,
     row.budget_per_person,
+    row.course_pattern_json,
     now,
     now
   ).run();
