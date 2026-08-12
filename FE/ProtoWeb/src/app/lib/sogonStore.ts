@@ -5,7 +5,7 @@ import {
 } from '../../../../../shared/sogonOpening';
 import type { DateQuestion } from '../../../../../shared/dateQuestions';
 import type { CourseSlot } from '../../../../../shared/dateCourseSkeleton';
-import type { CustomCourseKind } from '../../../../../shared/dateCourseSkeleton';
+import type { CourseStep } from '../../../../../shared/dateCourseSkeleton';
 import type { CorePreferenceQuestion } from '../../../../../shared/corePreferences';
 
 export type { SogonFileStatus };
@@ -115,14 +115,14 @@ export type CorePreferenceStatus = {
 
 export type CoursePreferenceMember = {
   nickname: string;
-  pattern: CustomCourseKind[];
+  pattern: CourseStep[];
   complete: boolean;
 };
 
 export type CoursePreferenceStatus = {
   mine: CoursePreferenceMember | null;
   partner: CoursePreferenceMember | null;
-  commonPattern: CustomCourseKind[];
+  commonPattern: CourseStep[];
   ready: boolean;
   agreed: boolean;
   needsCoordination: boolean;
@@ -136,7 +136,7 @@ export type DatePlan = {
   endTime: string | null;
   originArea: string | null;
   budgetPerPerson: number | null;
-  coursePattern: CustomCourseKind[] | null;
+  coursePattern: CourseStep[] | null;
   status: string;
   createdAt: string;
   createdByNickname: string | null;
@@ -614,7 +614,7 @@ export async function getCoursePreferences() {
   return apiFetch<{ coursePreferences: CoursePreferenceStatus }>('/api/course-preferences');
 }
 
-export async function saveCoursePreferences(pattern: CustomCourseKind[]) {
+export async function saveCoursePreferences(pattern: CourseStep[]) {
   return apiFetch<{ coursePreferences: CoursePreferenceStatus }>('/api/course-preferences', {
     method: 'PUT',
     body: JSON.stringify({ pattern })
@@ -636,7 +636,7 @@ export async function createDatePlan(input: {
   endTime?: string | null;
   originArea?: string | null;
   budgetPerPerson?: number | null;
-  coursePattern?: CustomCourseKind[] | null;
+  coursePattern?: CourseStep[] | null;
 }) {
   return apiFetch<{ datePlan: DatePlan }>('/api/date-plans', {
     method: 'POST',

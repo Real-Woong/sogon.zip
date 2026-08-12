@@ -874,6 +874,48 @@ async function testCourseSkeleton() {
     true
   );
 
+  section('[코스/직접구성] 정한 시간을 지키고, 모자라면 비율대로 줄인다');
+  const durationsOf = skeleton => skeleton.slots
+    .filter(slot => slot.placeKinds.length > 0)
+    .map(slot => slot.endMinutes - slot.startMinutes);
+
+  // 창 270분 - 이동 30분 = 장소 240분. 원한 건 90+180+60 = 330분.
+  const shrunk = buildCustomCourseSkeleton({
+    startTime: '12:00',
+    endTime: '16:30',
+    pattern: [
+      { kind: 'meal', minutes: 90 },
+      { kind: 'activity', minutes: 180 },
+      { kind: 'cafe', minutes: 60 }
+    ]
+  });
+  check('모자라면 최소 30분을 깔고 원한 비율대로 줄인다', durationsOf(shrunk), [67, 124, 49]);
+  check('줄여도 창을 정확히 다 쓴다', [shrunk.slots[0].startTime, shrunk.slots.at(-1).endTime], ['12:00', '16:30']);
+  check('줄일 때는 여유를 만들지 않는다', shrunk.slots.some(slot => slot.kind === 'buffer'), false);
+
+  // 창 120분 - 이동 15분 = 장소 105분. 원한 건 60+30 = 90분.
+  const roomy = buildCustomCourseSkeleton({
+    startTime: '12:00',
+    endTime: '14:00',
+    pattern: [{ kind: 'meal', minutes: 60 }, { kind: 'cafe', minutes: 30 }]
+  });
+  check('창이 남아도 정한 시간을 늘리지 않는다', durationsOf(roomy), [60, 30]);
+  check('남는 시간은 여유로 뗀다', roomy.slots.at(-1).label, '여유');
+  check('여유까지 합쳐 창을 정확히 다 쓴다', roomy.slots.at(-1).endTime, '14:00');
+  check(
+    '한 칸도 30분 아래로는 줄이지 않는다',
+    Math.min(...durationsOf(buildCustomCourseSkeleton({
+      startTime: '12:00',
+      endTime: '14:00',
+      pattern: [
+        { kind: 'meal', minutes: 240 },
+        { kind: 'cafe', minutes: 30 },
+        { kind: 'walk', minutes: 30 }
+      ]
+    }))) >= 30,
+    true
+  );
+
   section('[코스/골격] 늦게 시작하면 점심을 넣지 않는다');
   check('15시 시작에는 점심이 없다', labelsOf(buildCourseSkeleton({ startTime: '15:00', endTime: '20:00' })).includes('점심'), false);
   check('15시 시작에도 저녁은 있다', labelsOf(buildCourseSkeleton({ startTime: '15:00', endTime: '20:00' })).includes('저녁'), true);
@@ -1249,9 +1291,25 @@ async function testCoursePreferences() {
     m.commonCoursePattern(
       ['meal', 'cafe', 'activity', 'walk', 'meal'],
       ['meal', 'activity', 'cafe', 'walk', 'meal']
-    ),
+    ).map(step => step.kind),
     ['meal', 'activity', 'walk', 'meal']
   );
+  check(
+    '겹친 칸의 시간은 두 사람의 평균이다',
+    m.commonCoursePattern(
+      [{ kind: 'meal', minutes: 90 }, { kind: 'activity', minutes: 120 }],
+      [{ kind: 'meal', minutes: 30 }, { kind: 'activity', minutes: 240 }]
+    ),
+    [{ kind: 'meal', minutes: 60 }, { kind: 'activity', minutes: 180 }]
+  );
+  check(
+    '홀수 합은 내림해서 어느 계정에서나 같은 값이 나온다',
+    m.commonCoursePattern([{ kind: 'cafe', minutes: 45 }], [{ kind: 'cafe', minutes: 30 }]),
+    [{ kind: 'cafe', minutes: 37 }]
+  );
+  check('30분 미만은 저장할 수 없다', m.isValidCoursePattern([{ kind: 'cafe', minutes: 20 }]), false);
+  check('6시간 초과는 저장할 수 없다', m.isValidCoursePattern([{ kind: 'cafe', minutes: 400 }]), false);
+  check('종류만 있는 옛 형태도 그대로 받는다', m.isValidCoursePattern(['meal', 'cafe']), true);
   check('빈 흐름은 저장할 수 없다', m.isValidCoursePattern([]), false);
   check('장소 유형은 8개까지만 저장한다', m.isValidCoursePattern(Array(9).fill('meal')), false);
 
@@ -1265,7 +1323,11 @@ async function testCoursePreferences() {
       endTime: '17:00',
       pattern: ['meal', 'activity', 'cafe']
     }),
-    ['meal', 'activity', 'cafe']
+    [
+      { kind: 'meal', minutes: 90 },
+      { kind: 'activity', minutes: 120 },
+      { kind: 'cafe', minutes: 60 }
+    ]
   );
   check(
     '접점이 짧아 칸이 늘어나면 규칙 기본으로 물러난다',
@@ -1283,7 +1345,7 @@ async function testCoursePreferences() {
       endTime: '13:30',
       pattern: ['cafe']
     }),
-    ['cafe']
+    [{ kind: 'cafe', minutes: 60 }]
   );
   check(
     '접점이 창보다 길면 규칙 기본으로 물러난다',

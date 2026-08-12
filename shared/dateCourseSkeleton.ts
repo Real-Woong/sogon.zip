@@ -168,6 +168,82 @@ export function isCustomCourseKind(value: unknown): value is CustomCourseKind {
   return CUSTOM_COURSE_KIND_OPTIONS.some(option => option.kind === value);
 }
 
+/**
+ * 한 칸과 거기에 쓰고 싶은 시간. `SLOT_SPEC`의 preferred는 어디까지나 아무것도
+ * 안 정했을 때의 출발점이고, 사람이 정한 시간이 있으면 그쪽이 이긴다.
+ */
+export type CourseStep = {
+  kind: CustomCourseKind;
+  minutes: number;
+};
+
+/**
+ * 흐름을 받는 자리의 입력 타입. 시간이 붙은 칸과 종류만 있는 옛 칸을 섞어 받는다.
+ * 저장된 값을 검사기로 걸러내면 이 모양으로 좁혀지므로, 받는 쪽을 여기 맞춘다.
+ */
+export type CoursePatternInput = readonly (CustomCourseKind | CourseStep)[];
+
+/** 장소 한 칸의 하한. 이보다 짧으면 거기 들르는 의미가 없다. */
+export const MIN_STEP_MINUTES = 30;
+/**
+ * 둘의 기본 코스를 쓰고도 이만큼 넘게 남으면 규칙 기본 코스로 물러난다.
+ * 90분이면 장소 한 곳과 이동이 더 들어간다. 그 자리를 여유로 비워두느니
+ * 칸을 스스로 늘릴 줄 아는 쪽에 맡긴다.
+ */
+export const MAX_DEFAULT_IDLE_MINUTES = 90;
+/** 한 칸의 상한. 하루를 통째로 한 곳에 쓰는 흐름은 코스가 아니다. */
+export const MAX_STEP_MINUTES = 6 * 60;
+
+export function isCourseStep(value: unknown): value is CourseStep {
+  if (!value || typeof value !== 'object') return false;
+  const step = value as Partial<CourseStep>;
+  return isCustomCourseKind(step.kind) &&
+    typeof step.minutes === 'number' &&
+    Number.isInteger(step.minutes) &&
+    step.minutes >= MIN_STEP_MINUTES &&
+    step.minutes <= MAX_STEP_MINUTES;
+}
+
+/**
+ * 종류만 있던 옛 순서(`['meal','cafe']`)를 시간이 붙은 순서로 올린다.
+ * 시간을 정하기 전에 저장된 기본 코스와 약속이 그대로 열리게 하려고 남긴다.
+ */
+export function toCourseSteps(pattern: CoursePatternInput): CourseStep[] {
+  return pattern.map(item =>
+    typeof item === 'string'
+      ? { kind: item, minutes: SLOT_SPEC[item].preferred }
+      : { kind: item.kind, minutes: item.minutes }
+  );
+}
+
+/**
+ * 정해둔 시간을 예산 안으로 **줄인다**. 각 칸의 최소치를 깔고, 그 위로 원한
+ * 만큼의 비율대로 남은 예산을 나눈다. 늘리지는 않는다 — 그건 호출부가 정한다.
+ *
+ * 나머지 분은 소수부가 큰 칸부터, 같으면 앞 칸부터 준다. 화면과 서버가 같은
+ * 결과를 내야 미리보기에 보인 시간표가 그대로 저장된다.
+ */
+function shrinkStepsToBudget(steps: readonly CourseStep[], budget: number): number[] {
+  const flexible = budget - MIN_STEP_MINUTES * steps.length;
+  const extras = steps.map(step => Math.max(0, step.minutes - MIN_STEP_MINUTES));
+  const totalExtra = extras.reduce((sum, extra) => sum + extra, 0);
+  const shares = totalExtra > 0
+    ? extras.map(extra => (flexible * extra) / totalExtra)
+    : steps.map(() => flexible / steps.length);
+
+  const whole = shares.map(Math.floor);
+  let remainder = flexible - whole.reduce((sum, value) => sum + value, 0);
+  const byFraction = shares
+    .map((share, index) => ({ index, fraction: share - Math.floor(share) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (const entry of byFraction) {
+    if (remainder <= 0) break;
+    whole[entry.index] += 1;
+    remainder -= 1;
+  }
+  return whole.map(value => value + MIN_STEP_MINUTES);
+}
+
 // -- 시각 변환 ---------------------------------------------------------------
 
 export function parseTimeToMinutes(value: string): number | null {
@@ -220,11 +296,15 @@ function gapDraft(kind: 'transit' | 'buffer', start: number, end: number): Draft
 }
 
 /**
- * 사용자가 직접 고른 흐름을 시간 창 전체에 배치한다. 기본 골격은 그대로 두고,
- * 명시적으로 "직접 구성"을 고른 약속에서만 사용한다.
+ * 사람이 정한 흐름을 시간 창에 배치한다. 기본 골격(`buildCourseSkeleton`)은
+ * 그대로 두고, 직접 구성한 약속과 둘이 맞춘 기본 코스에서 쓴다.
+ *
+ * 칸별 시간이 붙어 있으면 그 시간을 지킨다. 창이 모자라면 비율대로 줄이고,
+ * 창이 남으면 **늘리지 않고** 남는 만큼을 여유 슬롯으로 뗀다. "관람 3시간"이라고
+ * 적은 사람에게 하루가 길다는 이유로 4시간 48분을 내밀지 않는다.
  */
 export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
-  pattern: readonly CustomCourseKind[];
+  pattern: CoursePatternInput;
 }) {
   const start = parseTimeToMinutes(input.startTime);
   const requestedEnd = input.endTime ? parseTimeToMinutes(input.endTime) : null;
@@ -238,33 +318,44 @@ export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
   if (end - start > MAX_WINDOW_MINUTES) {
     return { error: '하루 코스는 14시간 안에서 정해주세요.', slots: [], placeSlotCount: 0 };
   }
-  if (input.pattern.length < 1 || input.pattern.length > 8 || !input.pattern.every(isCustomCourseKind)) {
+  const valid = input.pattern.length >= 1 && input.pattern.length <= 8 &&
+    input.pattern.every(item => isCustomCourseKind(item) || isCourseStep(item));
+  if (!valid) {
     return { error: '데이트 흐름은 1개에서 8개 사이로 골라주세요.', slots: [], placeSlotCount: 0 };
   }
+  const steps = toCourseSteps(input.pattern);
 
   const transitMinutes = TRANSIT_MINUTES[input.transport ?? 'walk'];
-  const placeMinutes = end - start - transitMinutes * (input.pattern.length - 1);
-  if (placeMinutes < input.pattern.length * 30) {
+  const placeMinutes = end - start - transitMinutes * (steps.length - 1);
+  if (placeMinutes < steps.length * MIN_STEP_MINUTES) {
     return { error: '선택한 흐름에 비해 시간이 짧아요. 장소를 줄이거나 시간을 늘려주세요.', slots: [], placeSlotCount: 0 };
   }
 
-  const base = Math.floor(placeMinutes / input.pattern.length);
-  let remainder = placeMinutes % input.pattern.length;
+  const wanted = steps.reduce((sum, step) => sum + step.minutes, 0);
+  const durations = wanted <= placeMinutes
+    ? steps.map(step => step.minutes)
+    : shrinkStepsToBudget(steps, placeMinutes);
+  const leftover = placeMinutes - durations.reduce((sum, value) => sum + value, 0);
+
   let cursor = start;
   const drafts: Draft[] = [];
-  input.pattern.forEach((kind, index) => {
-    const duration = base + (remainder > 0 ? 1 : 0);
-    remainder = Math.max(0, remainder - 1);
-    const label = kind === 'meal'
+  steps.forEach((step, index) => {
+    const duration = durations[index];
+    const label = step.kind === 'meal'
       ? cursor < 15 * 60 ? '점심' : cursor < 20 * 60 ? '저녁' : '식사'
-      : SLOT_SPEC[kind].label;
-    drafts.push(placeDraft(kind, cursor, cursor + duration, label));
+      : SLOT_SPEC[step.kind].label;
+    drafts.push(placeDraft(step.kind, cursor, cursor + duration, label));
     cursor += duration;
-    if (index < input.pattern.length - 1) {
+    if (index < steps.length - 1) {
       drafts.push(gapDraft('transit', cursor, cursor + transitMinutes));
       cursor += transitMinutes;
     }
   });
+  // 정한 시간보다 창이 길 때 남는 몫. 마지막 칸에 억지로 붙이지 않고 여유로 둔다.
+  if (leftover > 0) {
+    drafts.push(gapDraft('buffer', cursor, cursor + leftover));
+    cursor += leftover;
+  }
 
   const slots = drafts.map((draft, index) => ({
     ...draft,
@@ -278,7 +369,7 @@ export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
     requestedStartMinutes: start,
     requestedEndMinutes: requestedEnd,
     slots,
-    placeSlotCount: input.pattern.length
+    placeSlotCount: steps.length
   };
 }
 
@@ -293,9 +384,9 @@ export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
  */
 export function resolveDefaultCoursePattern(
   input: CourseSkeletonInput & {
-    pattern: readonly CustomCourseKind[] | null | undefined;
+    pattern: CoursePatternInput | null | undefined;
   }
-): CustomCourseKind[] | null {
+): CourseStep[] | null {
   const { pattern } = input;
   if (!pattern || pattern.length === 0) return null;
 
@@ -303,12 +394,12 @@ export function resolveDefaultCoursePattern(
   // 에러 반환은 placeSlotCount가 0이다. 창이 흐름을 담지 못한 경우.
   if (skeleton.placeSlotCount === 0) return null;
 
-  const stretched = skeleton.slots.some(slot =>
-    slot.kind !== 'transit' &&
-    slot.kind !== 'buffer' &&
-    slot.endMinutes - slot.startMinutes > SLOT_SPEC[slot.kind].max
-  );
-  return stretched ? null : [...pattern];
+  // 칸을 늘리지는 않으므로 남는 시간은 여유로 떨어진다. 그 여유가 한 칸을
+  // 더 넣고도 남을 만큼이면, 칸을 스스로 늘릴 줄 아는 규칙 기본 코스가 낫다.
+  const idle = skeleton.slots
+    .filter(slot => slot.kind === 'buffer')
+    .reduce((sum, slot) => sum + (slot.endMinutes - slot.startMinutes), 0);
+  return idle > MAX_DEFAULT_IDLE_MINUTES ? null : toCourseSteps(pattern);
 }
 
 /**

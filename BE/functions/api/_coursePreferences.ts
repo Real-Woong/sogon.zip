@@ -1,4 +1,4 @@
-import type { CustomCourseKind } from '../../../shared/dateCourseSkeleton';
+import { toCourseSteps, type CourseStep } from '../../../shared/dateCourseSkeleton';
 import {
   commonCoursePattern,
   isValidCoursePattern
@@ -11,11 +11,12 @@ type PreferenceRow = {
   pattern_json: string | null;
 };
 
-export function parseCoursePreferencePattern(value: string | null): CustomCourseKind[] {
+/** 종류만 있던 옛 행도 읽는다. 읽는 즉시 시간이 붙은 형태로 올려서 내보낸다. */
+export function parseCoursePreferencePattern(value: string | null): CourseStep[] {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    return isValidCoursePattern(parsed) ? parsed : [];
+    return isValidCoursePattern(parsed) ? toCourseSteps(parsed) : [];
   } catch {
     return [];
   }

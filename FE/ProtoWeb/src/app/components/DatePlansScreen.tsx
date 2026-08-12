@@ -33,8 +33,11 @@ import {
   buildCourseSkeleton,
   buildCustomCourseSkeleton,
   CUSTOM_COURSE_KIND_OPTIONS,
+  MAX_STEP_MINUTES,
+  MIN_STEP_MINUTES,
   resolveDefaultCoursePattern,
   type CourseSlot,
+  type CourseStep,
   type CourseSlotKind,
   type CustomCourseKind
 } from '../../../../../shared/dateCourseSkeleton';
@@ -122,7 +125,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
   const [originArea, setOriginArea] = useState('');
   const [budget, setBudget] = useState('');
   const [customizeFlow, setCustomizeFlow] = useState(false);
-  const [coursePattern, setCoursePattern] = useState<CustomCourseKind[]>([]);
+  const [coursePattern, setCoursePattern] = useState<CourseStep[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [answeringOption, setAnsweringOption] = useState<string | null>(null);
@@ -162,14 +165,31 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
     return buildCustomCourseSkeleton({ startTime, endTime, pattern: coursePattern });
   }, [coursePattern, customizeFlow, defaultPreview, endTime, startTime]);
 
+  // 지금 보이는 시간표를 그대로 물려받아 시작한다. 빈 화면에서 처음부터
+  // 짜게 하면, 방금 본 기본 코스를 손으로 다시 옮겨 적어야 한다.
   const startCustomizing = () => {
-    const initial: CustomCourseKind[] = defaultPreview && !defaultPreview.error
+    const initial: CourseStep[] = defaultPreview && !defaultPreview.error
       ? defaultPreview.slots
           .filter(slot => slot.kind !== 'transit' && slot.kind !== 'buffer')
-          .map(slot => slot.kind as CustomCourseKind)
-      : ['meal', 'activity', 'cafe'];
+          .map(slot => ({
+            kind: slot.kind as CustomCourseKind,
+            minutes: Math.max(MIN_STEP_MINUTES, slot.endMinutes - slot.startMinutes)
+          }))
+      : [
+          { kind: 'meal', minutes: 90 },
+          { kind: 'activity', minutes: 120 },
+          { kind: 'cafe', minutes: 60 }
+        ];
     setCoursePattern(initial);
     setCustomizeFlow(true);
+  };
+
+  const setStepMinutes = (index: number, minutes: number) => {
+    setCoursePattern(current => current.map((step, stepIndex) =>
+      stepIndex === index
+        ? { ...step, minutes: Math.min(MAX_STEP_MINUTES, Math.max(MIN_STEP_MINUTES, minutes)) }
+        : step
+    ));
   };
 
   const movePattern = (index: number, offset: -1 | 1) => {
@@ -486,34 +506,55 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                 {customizeFlow ? (
                   <div className="mt-4 space-y-3">
                     <ol className="space-y-2">
-                      {coursePattern.map((kind, index) => (
-                        <li key={`${kind}-${index}`} className="flex items-center gap-2 rounded-xl bg-[color:var(--gray-light)] p-2">
-                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-black text-[color:var(--coral-deep)]">
-                            {index + 1}
-                          </span>
-                          <select
-                            aria-label={`${index + 1}번째 데이트 흐름`}
-                            value={kind}
-                            onChange={event => setCoursePattern(current => current.map((item, itemIndex) =>
-                              itemIndex === index ? event.target.value as CustomCourseKind : item
-                            ))}
-                            className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2 text-xs font-black text-[color:var(--navy)]"
-                          >
-                            {CUSTOM_COURSE_KIND_OPTIONS.map(option => (
-                              <option key={option.kind} value={option.kind}>{option.label}</option>
-                            ))}
-                          </select>
-                          <button type="button" aria-label="앞으로 이동" disabled={index === 0} onClick={() => movePattern(index, -1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↑</button>
-                          <button type="button" aria-label="뒤로 이동" disabled={index === coursePattern.length - 1} onClick={() => movePattern(index, 1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↓</button>
-                          <button
-                            type="button"
-                            aria-label="이 흐름 삭제"
-                            disabled={coursePattern.length === 1}
-                            onClick={() => setCoursePattern(current => current.filter((_, itemIndex) => itemIndex !== index))}
-                            className="rounded-lg px-2 py-2 text-[11px] font-black text-[color:var(--coral-deep)] disabled:opacity-25"
-                          >
-                            삭제
-                          </button>
+                      {coursePattern.map((step, index) => (
+                        <li key={`${step.kind}-${index}`} className="rounded-xl bg-[color:var(--gray-light)] p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-black text-[color:var(--coral-deep)]">
+                              {index + 1}
+                            </span>
+                            <select
+                              aria-label={`${index + 1}번째 데이트 흐름`}
+                              value={step.kind}
+                              onChange={event => setCoursePattern(current => current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, kind: event.target.value as CustomCourseKind }
+                                  : item
+                              ))}
+                              className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2 text-xs font-black text-[color:var(--navy)]"
+                            >
+                              {CUSTOM_COURSE_KIND_OPTIONS.map(option => (
+                                <option key={option.kind} value={option.kind}>{option.label}</option>
+                              ))}
+                            </select>
+                            <button type="button" aria-label="앞으로 이동" disabled={index === 0} onClick={() => movePattern(index, -1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↑</button>
+                            <button type="button" aria-label="뒤로 이동" disabled={index === coursePattern.length - 1} onClick={() => movePattern(index, 1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↓</button>
+                            <button
+                              type="button"
+                              aria-label="이 흐름 삭제"
+                              disabled={coursePattern.length === 1}
+                              onClick={() => setCoursePattern(current => current.filter((_, itemIndex) => itemIndex !== index))}
+                              className="rounded-lg px-2 py-2 text-[11px] font-black text-[color:var(--coral-deep)] disabled:opacity-25"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                          <div className="mt-2 flex items-center gap-3">
+                            <input
+                              type="range"
+                              aria-label={`${index + 1}번째 흐름 시간`}
+                              min={MIN_STEP_MINUTES}
+                              max={MAX_STEP_MINUTES}
+                              step={10}
+                              value={step.minutes}
+                              onChange={event => setStepMinutes(index, Number(event.target.value))}
+                              className="min-w-0 flex-1 accent-[color:var(--coral-deep)]"
+                            />
+                            <span className="w-20 shrink-0 text-right text-xs font-black text-[color:var(--navy)]">
+                              {step.minutes >= 60
+                                ? `${Math.floor(step.minutes / 60)}시간${step.minutes % 60 ? ` ${step.minutes % 60}분` : ''}`
+                                : `${step.minutes}분`}
+                            </span>
+                          </div>
                         </li>
                       ))}
                     </ol>
@@ -523,7 +564,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                           key={option.kind}
                           type="button"
                           disabled={coursePattern.length >= 8}
-                          onClick={() => setCoursePattern(current => [...current, option.kind])}
+                          onClick={() => setCoursePattern(current => [...current, { kind: option.kind, minutes: 60 }])}
                           className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-[color:var(--navy)] ring-1 ring-[color:var(--border)] disabled:opacity-30"
                         >
                           + {option.label}
