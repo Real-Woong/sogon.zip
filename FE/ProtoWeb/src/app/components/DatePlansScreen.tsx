@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import {
   CalendarDays,
   Check,
+  ChevronRight,
   Clock3,
   Coffee,
   Footprints,
@@ -17,10 +18,12 @@ import {
 import {
   answerTodayDateQuestion,
   createDatePlan,
+  getCorePreferences,
   getDatePlans,
   getTodayDateQuestion,
   type DatePlan,
   type DateCourseSlot,
+  type CorePreferenceStatus,
   type TodayDateQuestion
 } from '../lib/sogonStore';
 import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
@@ -34,6 +37,7 @@ import {
 } from '../../../../../shared/dateCourseSkeleton';
 import { AREA_OPTIONS, findAreaLabel } from '../../../../../shared/areas';
 import { ScreenHeader } from './shared/ScreenHeader';
+import { BottomNav } from './shared/BottomNav';
 
 const SLOT_ICON: Record<CourseSlotKind, typeof Coffee> = {
   meal: UtensilsCrossed,
@@ -104,7 +108,7 @@ function dateLabel(value: string) {
   }).format(date);
 }
 
-export function DatePlansScreen() {
+export function DatePlansScreen({ recommendationMode = false }: { recommendationMode?: boolean }) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [todayQuestion, setTodayQuestion] = useState<TodayDateQuestion | null>(null);
@@ -120,6 +124,7 @@ export function DatePlansScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [answeringOption, setAnsweringOption] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [corePreferences, setCorePreferences] = useState<CorePreferenceStatus | null>(null);
 
   const minDate = useMemo(() => dateKeyInTimeZone(), []);
 
@@ -188,7 +193,12 @@ export function DatePlansScreen() {
 
   useEffect(() => {
     void load();
-  }, []);
+    if (recommendationMode) {
+      getCorePreferences()
+        .then(data => setCorePreferences(data.corePreferences))
+        .catch(() => undefined);
+    }
+  }, [recommendationMode]);
 
   const handleCreate = async () => {
     if (!title.trim() || !scheduledDate || isSaving) {
@@ -246,9 +256,43 @@ export function DatePlansScreen() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#fffafa_0%,#f5f0ff_100%)]">
-      <ScreenHeader title="데이트 약속" backTo="/home" backLabel="홈으로 돌아가기" />
+      {recommendationMode ? (
+        <header className="shrink-0 bg-[color:var(--navy)] px-6 pb-5 pt-[max(1.5rem,env(safe-area-inset-top))] text-white">
+          <div className="flex items-center gap-2 text-[color:var(--mint)]">
+            <Sparkles className="h-5 w-5" />
+            <p className="text-xs font-black tracking-[0.16em]">DATE MATCH</p>
+          </div>
+          <h1 className="mt-2 text-2xl font-black">데이트 추천</h1>
+          <p className="mt-1 break-keep text-sm text-white/65">약속을 정하고 원하는 흐름으로 코스를 만들어요.</p>
+        </header>
+      ) : (
+        <ScreenHeader title="데이트 약속" backTo="/home" backLabel="홈으로 돌아가기" />
+      )}
 
-      <main className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 pb-10 scrollbar-hide">
+      <main className={`min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 scrollbar-hide ${recommendationMode ? 'pb-28' : 'pb-10'}`}>
+        {recommendationMode ? (
+          <button
+            type="button"
+            onClick={() => navigate('/core-preferences')}
+            className="flex w-full items-center gap-3 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
+          >
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+              <HeartHandshake className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-[color:var(--navy)]">
+                {corePreferences?.coupleReady ? '둘의 핵심 취향 준비 완료' : '핵심 취향 먼저 알려주기'}
+              </p>
+              <p className="mt-1 text-xs font-bold text-[color:var(--gray)]">
+                내 답변 {corePreferences?.answeredCount ?? 0}/{corePreferences?.total ?? 20}
+                {corePreferences?.partner
+                  ? ` · ${corePreferences.partner.nickname}님 ${corePreferences.partner.answeredCount}/${corePreferences.total}`
+                  : ''}
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+          </button>
+        ) : null}
         {todayQuestion ? (
           <section className="rounded-[2rem] bg-[color:var(--navy)] p-5 text-white shadow-[0_16px_36px_rgba(45,39,56,0.2)]">
             <div className="mb-4 flex items-start justify-between gap-3">
@@ -573,6 +617,7 @@ export function DatePlansScreen() {
           </p>
         ) : null}
       </main>
+      {recommendationMode ? <BottomNav /> : null}
     </div>
   );
 }

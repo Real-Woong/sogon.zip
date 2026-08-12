@@ -173,6 +173,7 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
     return json({ datePlans: [] });
   }
 
+  const calendarView = new URL(request.url).searchParams.get('view') === 'calendar';
   const today = dateKeyInTimeZone();
   const rows = await all<DatePlanRow>(env.DB.prepare(
     `SELECT p.id, p.title, p.scheduled_date, p.start_time, p.end_time, p.origin_area,
@@ -181,10 +182,16 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
        FROM date_plans p
        LEFT JOIN members m ON m.id = p.created_by
       WHERE p.room_id = ?
-        AND p.status = 'planned'
-        AND p.scheduled_date >= ?
+        ${calendarView
+          ? "AND p.status IN ('planned', 'completed')"
+          : "AND p.status = 'planned' AND p.scheduled_date >= ?"}
       ORDER BY p.scheduled_date ASC, p.start_time ASC, p.created_at ASC`
-  ).bind(member.room_id, today));
+  ).bind(...(calendarView ? [member.room_id] : [member.room_id, today])));
+
+  // 캘린더는 날짜·제목만 쓰므로 취향 집계와 장소 후보 조회를 하지 않는다.
+  if (calendarView) {
+    return json({ datePlans: rows.map(row => toDatePlan(row, member.id)) });
+  }
 
   const [progress, signalRows] = await Promise.all([
     all<PreferenceProgressRow>(env.DB.prepare(

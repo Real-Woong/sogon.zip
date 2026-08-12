@@ -595,8 +595,10 @@ export async function saveCorePreferenceAnswer(input: {
 
 // -- 데이트 약속 / 오늘의 질문 ---------------------------------------------
 
-export async function getDatePlans() {
-  return apiFetch<{ datePlans: DatePlan[] }>('/api/date-plans');
+export async function getDatePlans(options?: { calendarView?: boolean }) {
+  return apiFetch<{ datePlans: DatePlan[] }>(
+    options?.calendarView ? '/api/date-plans?view=calendar' : '/api/date-plans'
+  );
 }
 
 export async function createDatePlan(input: {

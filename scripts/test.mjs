@@ -259,6 +259,9 @@ function testDatePlanSchema() {
      INSERT INTO date_plans
        (id,room_id,created_by,title,scheduled_date,start_time,status,created_at,updated_at)
        VALUES ('plan_1','room_ab','mem_a','성수 데이트','2026-08-17','14:30','planned','2026-08-10','2026-08-10');
+     INSERT INTO date_plans
+       (id,room_id,created_by,title,scheduled_date,start_time,status,created_at,updated_at)
+       VALUES ('plan_past','room_ab','mem_b','지난 데이트','2026-08-01','18:00','planned','2026-07-30','2026-07-30');
      INSERT INTO preferences VALUES ('pref_q1','room_ab','mem_a','오늘의 질문','질문 — 답','2026-08-10');
      INSERT INTO date_question_answers
        (id,plan_id,room_id,member_id,question_id,option_id,axis,tag,weight,preference_id,answered_on,created_at)
@@ -268,8 +271,20 @@ function testDatePlanSchema() {
   section('[날짜/약속] 방의 두 사람에게 같은 약속이 보인다');
   check(
     'room_id로 조회하면 만든 사람과 무관하게 약속이 나온다',
-    sqlite(db, `SELECT title FROM date_plans WHERE room_id='room_ab' AND status='planned';`),
+    sqlite(db, `SELECT group_concat(title, ',') FROM (SELECT title FROM date_plans WHERE room_id='room_ab' AND status='planned' ORDER BY scheduled_date);`),
+    '지난 데이트,성수 데이트'
+  );
+
+  section('[날짜/캘린더] 지난 데이트도 기록에 남는다');
+  check(
+    '다가오는 약속 목록은 오늘 이후만 조회한다',
+    sqlite(db, `SELECT group_concat(title) FROM date_plans WHERE room_id='room_ab' AND status='planned' AND scheduled_date >= '2026-08-10';`),
     '성수 데이트'
+  );
+  check(
+    '캘린더는 지난 약속도 함께 조회한다',
+    sqlite(db, `SELECT group_concat(title, ',') FROM (SELECT title FROM date_plans WHERE room_id='room_ab' AND status IN ('planned','completed') ORDER BY scheduled_date);`),
+    '지난 데이트,성수 데이트'
   );
 
   section('[날짜/질문] 같은 사람이 같은 문항에 두 번 답하지 않는다');

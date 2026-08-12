@@ -183,7 +183,7 @@ export function HomeScreen() {
             <section aria-labelledby="date-plan-title" className="mx-auto w-full max-w-[366px]">
               <button
                 type="button"
-                onClick={() => navigate('/date-plans')}
+                onClick={() => navigate('/recommendation')}
                 className="group flex min-h-[190px] w-full flex-col justify-between overflow-hidden rounded-[2rem] bg-[linear-gradient(145deg,#fff1bd_0%,#ffe3d6_48%,#eadfff_100%)] p-5 text-left shadow-[0_16px_36px_rgba(128,99,149,0.16)] ring-1 ring-white transition-transform hover:-translate-y-0.5"
               >
                 <div className="flex w-full items-start justify-between gap-4">
