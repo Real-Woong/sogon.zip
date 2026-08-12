@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
   CalendarDays,
   Check,
@@ -67,6 +68,11 @@ function CourseTimeline({ slots }: { slots: DateCourseSlot[] | CourseSlot[] }) {
                     {slot.label}
                     {slot.place.address ? ` · ${slot.place.address}` : ''}
                   </span>
+                  {slot.place.preferenceReason ? (
+                    <span className="mt-1 block text-[10px] font-bold text-emerald-700">
+                      {slot.place.preferenceReason}
+                    </span>
+                  ) : null}
                   {slot.place.caution ? (
                     <span className="mt-1 block text-[10px] font-bold text-[color:var(--coral-deep)]">
                       {slot.place.caution}
@@ -96,6 +102,7 @@ function dateLabel(value: string) {
 }
 
 export function DatePlansScreen() {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [todayQuestion, setTodayQuestion] = useState<TodayDateQuestion | null>(null);
   const [title, setTitle] = useState('');
@@ -410,17 +417,27 @@ export function DatePlansScreen() {
                     </div>
                   </div>
                   {plan.course ? (
-                    <details className="mt-3">
-                      <summary className="cursor-pointer text-xs font-black text-[color:var(--coral-deep)]">
-                        이날 실제 코스 보기 · {plan.course.filledPlaceCount}/{plan.course.placeSlotCount}곳 추천
-                      </summary>
-                      <CourseTimeline slots={plan.course.slots} />
-                      {plan.course.filledPlaceCount < plan.course.placeSlotCount ? (
-                        <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--gray)]">
-                          비어 있는 시간은 날짜·동네·영업시간 조건을 만족하는 장소를 찾지 못했어요.
-                        </p>
-                      ) : null}
-                    </details>
+                    plan.course.preferenceReady ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs font-black text-[color:var(--coral-deep)]">
+                          둘의 취향 코스 보기 · {plan.course.filledPlaceCount}/{plan.course.placeSlotCount}곳 추천
+                        </summary>
+                        <CourseTimeline slots={plan.course.slots} />
+                        {plan.course.filledPlaceCount < plan.course.placeSlotCount ? (
+                          <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--gray)]">
+                            비어 있는 시간은 날짜·동네·영업시간 조건을 만족하는 장소를 찾지 못했어요.
+                          </p>
+                        ) : null}
+                      </details>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/core-preferences')}
+                        className="mt-3 w-full rounded-2xl bg-[color:var(--blush)] px-4 py-3 text-left text-xs font-black text-[color:var(--coral-deep)]"
+                      >
+                        핵심 취향 답변 후 코스 열기 · {plan.course.preferenceCompletedMembers}/{plan.course.preferenceRequiredMembers}명 완료
+                      </button>
+                    )
                   ) : null}
                 </article>
               ))}

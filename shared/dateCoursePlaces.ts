@@ -1,6 +1,7 @@
 import type { CourseSlot } from './dateCourseSkeleton';
 import { deserializeOpeningHours, isOpenDuring, type OpenState } from './openingHours';
 import type { PlaceKind } from './placeNormalize';
+import { CORE_PREFERENCE_TAG_LABELS } from './corePreferences';
 
 export type CoursePlaceCandidate = {
   id: string;
@@ -24,6 +25,14 @@ export type SelectedCoursePlace = Pick<
   openState: OpenState;
   /** 영업시간을 확정하지 못한 경우 화면에 반드시 함께 보여준다. */
   caution: string | null;
+  /** 두 사람 모두 양수로 답한 피처가 있을 때만 보여주는 추천 근거. */
+  preferenceReason: string | null;
+};
+
+export type CoursePreferenceSignal = {
+  memberId: string;
+  tag: string;
+  weight: number;
 };
 
 export type FilledCourseSlot = CourseSlot & { place: SelectedCoursePlace | null };
@@ -51,6 +60,54 @@ function eventPriority(candidate: CoursePlaceCandidate, slot: CourseSlot) {
   return 0;
 }
 
+function candidatePreferenceTags(candidate: CoursePlaceCandidate) {
+  const tags = new Set<string>([
+    `kind:${candidate.kind}`,
+    ...candidate.tags.filter(tag => /^(?:cuisine|genre|fee|audience):/.test(tag))
+  ]);
+  if (candidate.isIndoor === true) tags.add('indoor:true');
+  if (tags.has('audience:kids') || tags.has('audience:family')) {
+    tags.add('audience:family_or_kids');
+  }
+  return tags;
+}
+
+function preferenceFit(
+  candidate: CoursePlaceCandidate,
+  signals: readonly CoursePreferenceSignal[]
+) {
+  const candidateTags = candidatePreferenceTags(candidate);
+  const byMember = new Map<string, number>();
+  const positiveByTag = new Map<string, Set<string>>();
+
+  for (const signal of signals) {
+    if (!candidateTags.has(signal.tag)) continue;
+    byMember.set(signal.memberId, (byMember.get(signal.memberId) ?? 0) + signal.weight);
+    if (signal.weight > 0) {
+      const members = positiveByTag.get(signal.tag) ?? new Set<string>();
+      members.add(signal.memberId);
+      positiveByTag.set(signal.tag, members);
+    }
+  }
+
+  const memberIds = [...new Set(signals.map(signal => signal.memberId))];
+  const scores = memberIds.map(memberId => byMember.get(memberId) ?? 0);
+  const minimum = scores.length > 0 ? Math.min(...scores) : 0;
+  const average = scores.length > 0
+    ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+    : 0;
+  const sharedPositiveTag = [...positiveByTag.entries()]
+    .find(([, members]) => memberIds.length > 0 && members.size === memberIds.length)?.[0] ?? null;
+
+  return {
+    minimum,
+    average,
+    reason: sharedPositiveTag
+      ? `둘 다 좋아한다고 답한 ${CORE_PREFERENCE_TAG_LABELS[sharedPositiveTag] ?? '취향'}을 반영했어요.`
+      : null
+  };
+}
+
 /**
  * 시간 골격의 빈 칸에 실제 장소를 넣는다.
  *
@@ -61,6 +118,7 @@ export function fillCourseWithPlaces(input: {
   slots: readonly CourseSlot[];
   candidates: readonly CoursePlaceCandidate[];
   scheduledDate: string;
+  preferenceSignals?: readonly CoursePreferenceSignal[];
 }): FilledCourseSlot[] {
   const weekday = weekdayOf(input.scheduledDate);
   const used = new Set<string>();
@@ -76,6 +134,7 @@ export function fillCourseWithPlaces(input: {
       )
       .map(candidate => ({
         candidate,
+        preferenceFit: preferenceFit(candidate, input.preferenceSignals ?? []),
         openState: isOpenDuring(
           deserializeOpeningHours(candidate.openingHoursJson),
           weekday,
@@ -86,6 +145,8 @@ export function fillCourseWithPlaces(input: {
       // 닫힌 장소는 아무리 좋아도 들어가지 않는다.
       .filter(item => item.openState !== 'closed')
       .sort((left, right) =>
+        right.preferenceFit.minimum - left.preferenceFit.minimum ||
+        right.preferenceFit.average - left.preferenceFit.average ||
         eventPriority(right.candidate, slot) - eventPriority(left.candidate, slot) ||
         Number(right.openState === 'open') - Number(left.openState === 'open') ||
         Number(slot.preferIndoor && right.candidate.isIndoor === true) -
@@ -112,7 +173,8 @@ export function fillCourseWithPlaces(input: {
         openState: selected.openState,
         caution: selected.openState === 'unknown'
           ? '영업시간을 확인하지 못했어요. 방문 전에 확인해주세요.'
-          : null
+          : null,
+        preferenceReason: selected.preferenceFit.reason
       }
     };
   });

@@ -156,7 +156,8 @@ const MIGRATIONS = [
   '0002_security_and_scheduling.sql',
   '0003_recommendation.sql',
   '0004_date_plans.sql',
-  '0005_date_plan_window.sql'
+  '0005_date_plan_window.sql',
+  '0006_core_preference_answers.sql'
 ];
 
 function buildSchema(db) {
@@ -200,6 +201,49 @@ async function testDateQuestionRules() {
       return left.axis === right.axis && left.tag === right.tag && left.weight === -right.weight;
     }),
     true
+  );
+}
+
+async function testCorePreferenceRules() {
+  const {
+    CORE_PREFERENCE_OPTIONS,
+    CORE_PREFERENCE_QUESTIONS,
+    CORE_PREFERENCE_TOTAL,
+    findCorePreference
+  } = await bundle('shared/corePreferences.ts', 'core_preferences.mjs');
+
+  section('[핵심취향] 실제 장소 데이터로 판정 가능한 20문항');
+  check('필수 문항은 20개다', CORE_PREFERENCE_TOTAL, 20);
+  check('질문 id가 겹치지 않는다', new Set(CORE_PREFERENCE_QUESTIONS.map(item => item.id)).size, 20);
+  check('추천 피처 tag가 겹치지 않는다', new Set(CORE_PREFERENCE_QUESTIONS.map(item => item.tag)).size, 20);
+  check('좋음·중립·피함 세 단계다', CORE_PREFERENCE_OPTIONS.map(item => item.weight), [1, 0, -1]);
+  check('정의되지 않은 답은 거절한다', findCorePreference('food-korean', 'maybe'), null);
+
+  const db = join(work, 'core-preferences.db');
+  buildSchema(db);
+  seedRoom(db);
+  sqlite(
+    db,
+    `INSERT INTO core_preference_answers
+       (id,room_id,member_id,question_id,option_id,axis,tag,weight,created_at,updated_at)
+     VALUES ('core_1','room_ab','mem_a','food-korean','like','food','cuisine:korean',1,'2026-08-12','2026-08-12');`
+  );
+  let duplicate = false;
+  try {
+    sqlite(
+      db,
+      `INSERT INTO core_preference_answers
+         (id,room_id,member_id,question_id,option_id,axis,tag,weight,created_at,updated_at)
+       VALUES ('core_2','room_ab','mem_a','food-korean','avoid','food','cuisine:korean',-1,'2026-08-12','2026-08-12');`
+    );
+  } catch {
+    duplicate = true;
+  }
+  check('한 사람은 한 질문에 답 하나만 가진다', duplicate, true);
+  check(
+    '소곤파일 본문으로 가는 경로가 없다',
+    /content/i.test(sqlite(db, `SELECT group_concat(name) FROM pragma_table_info('core_preference_answers');`)),
+    false
   );
 }
 
@@ -977,6 +1021,24 @@ async function testCoursePlaces() {
   check('닫힌 식당은 들어가지 않는다', places.some(place => place.name === '닫힌 식당'), false);
   check('영업시간 미상은 확인 경고를 붙인다', Boolean(places.find(place => place.id === 'meal_unknown')?.caution), true);
   check('같은 장소를 하루에 두 번 넣지 않는다', new Set(places.map(place => place.id)).size, places.length);
+
+  const preferenceFilled = fillCourseWithPlaces({
+    slots: day.slots,
+    scheduledDate: '2026-08-15',
+    preferenceSignals: [
+      { memberId: 'a', tag: 'genre:art', weight: 1 },
+      { memberId: 'b', tag: 'genre:art', weight: 1 },
+      { memberId: 'a', tag: 'genre:history', weight: -1 },
+      { memberId: 'b', tag: 'genre:history', weight: -1 }
+    ],
+    candidates: [
+      candidate({ id: 'limited_history', name: '기간 한정 역사 행사', tags: ['genre:history'], startsAt: '2026-08-01', endsAt: '2026-08-31' }),
+      candidate({ id: 'liked_art', kind: 'exhibition', name: '둘이 좋아하는 미술 전시', tags: ['genre:art'] })
+    ]
+  });
+  const preferenceActivity = preferenceFilled.find(slot => slot.kind === 'activity')?.place;
+  check('기간 한정 행사보다 둘의 공통 취향을 먼저 반영한다', preferenceActivity?.name, '둘이 좋아하는 미술 전시');
+  check('왜 골랐는지 공통 취향 근거를 남긴다', preferenceActivity?.preferenceReason, '둘 다 좋아한다고 답한 미술을 반영했어요.');
 }
 
 // --------------------------------------------------------------------- 상권
@@ -1140,6 +1202,7 @@ function testDatePlanWindowSchema() {
 try {
   await testOpeningRules();
   await testDateQuestionRules();
+  await testCorePreferenceRules();
   await testPasswords();
   testRoomAndVisibility();
   await testPlaceNormalize();

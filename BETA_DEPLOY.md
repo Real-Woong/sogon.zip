@@ -43,6 +43,7 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0002_security
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0003_recommendation.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0004_date_plans.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0005_date_plan_window.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0006_core_preference_answers.sql
 ```
 
 `--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
@@ -50,6 +51,9 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0005_date_pla
 `0005`는 2026-08-11에 프로덕션에 적용했다. 앞으로 컬럼을 추가하는 마이그레이션은
 **항상 코드보다 먼저** 넣는다. 순서를 바꾸면 새 컬럼을 SELECT/INSERT하는 API가
 통째로 500이 난다.
+
+`0006`은 홈의 핵심 취향 20문항 답변을 저장한다. 핵심 취향 API와 실제 코스 코드를
+배포하기 전에 반드시 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
 
 `0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
 날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는
@@ -192,7 +196,8 @@ https://프로젝트이름.pages.dev
 - 이메일 인증과 비밀번호 재설정이 없다. 비밀번호를 잊으면 복구할 방법이 없다.
 - 연결 해제와 탈퇴는 즉시 삭제라 되돌릴 수 없고, 내보내기 기능도 아직 없다.
 - 세션은 30일이면 만료된다(쓰는 동안에는 자동 연장).
-- 추천 기능은 아직 자리만 잡혀 있고 실제 추천 로직이 없다.
+- 실제 장소 코스는 두 사람이 핵심 취향 20문항을 모두 마친 뒤 열린다. 알레르기·가격은
+  판정 데이터가 없어 아직 추천 필터에 포함하지 않는다.
 - 알림이 없어서, 소곤파일이 열릴 날이 와도 앱을 직접 열어야 알 수 있다.
 
 ## 배포 후 꼭 확인할 것
