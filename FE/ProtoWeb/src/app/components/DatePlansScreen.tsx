@@ -19,6 +19,7 @@ import {
   getDatePlans,
   getTodayDateQuestion,
   type DatePlan,
+  type DateCourseSlot,
   type TodayDateQuestion
 } from '../lib/sogonStore';
 import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
@@ -39,8 +40,7 @@ const SLOT_ICON: Record<CourseSlotKind, typeof Coffee> = {
   buffer: Clock3
 };
 
-/** 시간표 한 줄. 장소가 아직 없으므로 무엇을 채울 자리인지만 보여준다. */
-function CourseTimeline({ slots }: { slots: CourseSlot[] }) {
+function CourseTimeline({ slots }: { slots: DateCourseSlot[] | CourseSlot[] }) {
   return (
     <ol className="mt-3 space-y-1.5">
       {slots.map(slot => {
@@ -59,7 +59,22 @@ function CourseTimeline({ slots }: { slots: CourseSlot[] }) {
             <span className="w-[86px] shrink-0 tabular-nums">
               {slot.startTime}–{slot.endTime}
             </span>
-            <span className="min-w-0 flex-1 break-keep">{slot.label}</span>
+            <span className="min-w-0 flex-1 break-keep">
+              {'place' in slot && slot.place ? (
+                <span className="block">
+                  <span className="block text-sm font-black">{slot.place.name}</span>
+                  <span className="mt-0.5 block text-[10px] font-medium text-[color:var(--gray)]">
+                    {slot.label}
+                    {slot.place.address ? ` · ${slot.place.address}` : ''}
+                  </span>
+                  {slot.place.caution ? (
+                    <span className="mt-1 block text-[10px] font-bold text-[color:var(--coral-deep)]">
+                      {slot.place.caution}
+                    </span>
+                  ) : null}
+                </span>
+              ) : slot.label}
+            </span>
             {slot.weatherNote ? (
               <span className="shrink-0 text-[10px] text-[color:var(--coral-deep)]">날씨</span>
             ) : null}
@@ -397,9 +412,14 @@ export function DatePlansScreen() {
                   {plan.course ? (
                     <details className="mt-3">
                       <summary className="cursor-pointer text-xs font-black text-[color:var(--coral-deep)]">
-                        이날 시간표 보기 · 갈 곳 {plan.course.placeSlotCount}군데
+                        이날 실제 코스 보기 · {plan.course.filledPlaceCount}/{plan.course.placeSlotCount}곳 추천
                       </summary>
                       <CourseTimeline slots={plan.course.slots} />
+                      {plan.course.filledPlaceCount < plan.course.placeSlotCount ? (
+                        <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--gray)]">
+                          비어 있는 시간은 날짜·동네·영업시간 조건을 만족하는 장소를 찾지 못했어요.
+                        </p>
+                      ) : null}
                     </details>
                   ) : null}
                 </article>

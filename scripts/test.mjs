@@ -925,6 +925,60 @@ async function testOpeningHours() {
   check('원문만 있어도 저장한다', typeof serializeOpeningHours(parseOpeningHours('평일 09:00~18:00')), 'string');
 }
 
+// ------------------------------------------------------------- 실제 장소 채우기
+async function testCoursePlaces() {
+  const { buildCourseSkeleton } = await bundle(
+    'shared/dateCourseSkeleton.ts',
+    'course_places_skeleton.mjs'
+  );
+  const { fillCourseWithPlaces } = await bundle(
+    'shared/dateCoursePlaces.ts',
+    'course_places.mjs'
+  );
+  const { parseOpeningHours, serializeOpeningHours } = await bundle(
+    'shared/openingHours.ts',
+    'course_places_hours.mjs'
+  );
+
+  const day = buildCourseSkeleton({ startTime: '12:00', endTime: '21:00' });
+  const candidate = (input = {}) => ({
+    id: 'place_default',
+    kind: 'activity',
+    name: '상설 공간',
+    address: '서울',
+    areaCode: 'seongsu',
+    isIndoor: true,
+    tags: [],
+    openingHoursJson: serializeOpeningHours(parseOpeningHours('09:00~22:00')),
+    startsAt: null,
+    endsAt: null,
+    popularity: 0,
+    infoConfidence: 0.5,
+    ...input
+  });
+  const filled = fillCourseWithPlaces({
+    slots: day.slots,
+    scheduledDate: '2026-08-15',
+    candidates: [
+      candidate({ id: 'meal_closed', kind: 'restaurant', name: '닫힌 식당', openingHoursJson: serializeOpeningHours(parseOpeningHours('09:00~11:00')) }),
+      candidate({ id: 'meal_unknown', kind: 'restaurant', name: '확인 필요한 식당', openingHoursJson: null }),
+      candidate({ id: 'event_ended', kind: 'exhibition', name: '끝난 전시', startsAt: '2026-07-01', endsAt: '2026-08-14' }),
+      candidate({ id: 'event_now', kind: 'exhibition', name: '지금 하는 전시', startsAt: '2026-08-01', endsAt: '2026-08-31' }),
+      candidate({ id: 'activity_regular', name: '상설 체험' }),
+      candidate({ id: 'cafe', kind: 'cafe', name: '카페' }),
+      candidate({ id: 'park', kind: 'park', name: '공원' })
+    ]
+  });
+  const places = filled.map(slot => slot.place).filter(Boolean);
+
+  section('[코스/장소] 실제 날짜·종류·영업시간으로 슬롯을 채운다');
+  check('진행 중인 기간 한정 행사를 활동보다 먼저 고른다', places.find(place => place.kind === 'exhibition')?.name, '지금 하는 전시');
+  check('날짜가 끝난 행사는 들어가지 않는다', places.some(place => place.name === '끝난 전시'), false);
+  check('닫힌 식당은 들어가지 않는다', places.some(place => place.name === '닫힌 식당'), false);
+  check('영업시간 미상은 확인 경고를 붙인다', Boolean(places.find(place => place.id === 'meal_unknown')?.caution), true);
+  check('같은 장소를 하루에 두 번 넣지 않는다', new Set(places.map(place => place.id)).size, places.length);
+}
+
 // --------------------------------------------------------------------- 상권
 async function testAreaConsistency() {
   const { AREA_OPTIONS, findAreaLabel } = await bundle('shared/areas.ts', 'areas_shared.mjs');
@@ -1094,6 +1148,7 @@ try {
   testDatePlanSchema();
   await testCourseSkeleton();
   await testOpeningHours();
+  await testCoursePlaces();
   await testAreaConsistency();
   await testPlaceFacets();
   testDatePlanWindowSchema();

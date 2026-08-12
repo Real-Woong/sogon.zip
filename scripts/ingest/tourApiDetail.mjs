@@ -124,6 +124,31 @@ function contentTypeIdOf(row) {
   }
 }
 
+/**
+ * 샘플은 external_id 앞쪽이 아니라 콘텐츠 타입별로 고른다.
+ * 정렬된 앞 5건을 쓰면 쇼핑(38)만 나와 다른 타입의 필드명이 비어도 발견하지 못한다.
+ */
+function pickTypeBalancedSample(rows, count) {
+  const picked = [];
+  const seenTypes = new Set();
+
+  for (const row of rows) {
+    const typeId = contentTypeIdOf(row);
+    if (!typeId || seenTypes.has(typeId)) continue;
+    picked.push(row);
+    seenTypes.add(typeId);
+    if (picked.length >= count) return picked;
+  }
+
+  for (const row of rows) {
+    if (picked.includes(row)) continue;
+    picked.push(row);
+    if (picked.length >= count) break;
+  }
+
+  return picked;
+}
+
 // ---------------------------------------------------------------- 수집
 
 async function fetchDetail(key, contentId, contentTypeId) {
@@ -197,7 +222,7 @@ function toSql(record, fetchedAt) {
 // ---------------------------------------------------------------- 실행
 
 async function main() {
-  const key = decodeURIComponent(requireKey('TOUR_API_KEY'));
+  const key = decodeURIComponent(requireKey('DATA_GO_KR_KEY'));
   const { parseOpeningHours, serializeOpeningHours } = await loadShared(
     'shared/openingHours.ts',
     'openingHours.mjs'
@@ -215,7 +240,7 @@ async function main() {
   // --sample: 실제 응답에 어떤 키가 오는지부터 본다. 문서보다 이게 정확하다.
   if (sampleCount > 0) {
     console.log(`\n샘플 ${sampleCount}건의 응답 키를 그대로 출력한다.\n`);
-    for (const row of pending.slice(0, sampleCount)) {
+    for (const row of pickTypeBalancedSample(pending, sampleCount)) {
       const typeId = contentTypeIdOf(row);
       const item = await fetchDetail(key, row.content_id, typeId);
       console.log(`  ${row.name} (kind=${row.kind}, contentTypeId=${typeId})`);
