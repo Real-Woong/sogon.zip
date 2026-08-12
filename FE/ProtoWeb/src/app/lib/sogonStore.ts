@@ -72,10 +72,24 @@ export type UserPreference = {
   createdAt: string;
 };
 
-/** 시간 창만으로 만든 하루 시간표. 장소는 아직 비어 있다. */
+export type CoursePlace = {
+  id: string;
+  kind: string;
+  name: string;
+  address: string | null;
+  isIndoor: boolean | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  openState: 'open' | 'closed' | 'unknown';
+  caution: string | null;
+};
+
+export type DateCourseSlot = CourseSlot & { place?: CoursePlace | null };
+
 export type DateCourse = {
-  slots: CourseSlot[];
+  slots: DateCourseSlot[];
   placeSlotCount: number;
+  filledPlaceCount: number;
   note?: string;
 };
 

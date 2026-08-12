@@ -1,5 +1,10 @@
 import { dateKeyInTimeZone, isDateKey } from '../../../../shared/dateQuestions';
 import { buildCourseSkeleton } from '../../../../shared/dateCourseSkeleton';
+import {
+  fillCourseWithPlaces,
+  type CoursePlaceCandidate
+} from '../../../../shared/dateCoursePlaces';
+import { isPlaceKind } from '../../../../shared/placeNormalize';
 import { all, Env, handle, json, newId, readJson, requireMember } from '../_shared';
 
 type DatePlanRow = {
@@ -25,17 +30,72 @@ type CreateDatePlanInput = {
   budgetPerPerson?: number | null;
 };
 
+type PlaceRow = {
+  id: string;
+  kind: string;
+  name: string;
+  address: string | null;
+  area_code: string | null;
+  is_indoor: number | null;
+  tags_json: string;
+  opening_hours_json: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  popularity: number | null;
+  info_confidence: number;
+};
+
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 /** 1인 예산 상한. 100만원을 넘기면 입력 실수로 본다. */
 const MAX_BUDGET_PER_PERSON = 1_000_000;
 
-function toDatePlan(row: DatePlanRow, viewerId: string) {
-  // 시간 창이 정해진 약속은 골격을 함께 내려준다. 화면이 "이날 이렇게 흘러가요"를
-  // 장소 없이도 보여줄 수 있고, 아직 후보 생성이 없는 지금은 이게 코스의 전부다.
+function parseTags(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function toCandidate(row: PlaceRow): CoursePlaceCandidate | null {
+  if (!isPlaceKind(row.kind)) return null;
+  return {
+    id: row.id,
+    kind: row.kind,
+    name: row.name,
+    address: row.address,
+    areaCode: row.area_code,
+    isIndoor: row.is_indoor === null ? null : row.is_indoor === 1,
+    tags: parseTags(row.tags_json),
+    openingHoursJson: row.opening_hours_json,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    popularity: row.popularity,
+    infoConfidence: row.info_confidence
+  };
+}
+
+function toDatePlan(
+  row: DatePlanRow,
+  viewerId: string,
+  candidates: readonly CoursePlaceCandidate[] = []
+) {
+  // 시간 창과 동네가 정해졌을 때만 실제 장소를 넣는다. 동네가 없는데 서울 전체에서
+  // 하나를 고르면 이동시간 15분이라는 골격과 모순된다.
   const skeleton = row.start_time
     ? buildCourseSkeleton({ startTime: row.start_time, endTime: row.end_time })
     : null;
+  const slots = skeleton && !skeleton.error
+    ? fillCourseWithPlaces({
+        slots: skeleton.slots,
+        candidates: row.origin_area
+          ? candidates.filter(candidate => candidate.areaCode === row.origin_area)
+          : [],
+        scheduledDate: row.scheduled_date
+      })
+    : [];
 
   return {
     id: row.id,
@@ -50,7 +110,12 @@ function toDatePlan(row: DatePlanRow, viewerId: string) {
     createdByNickname: row.creator_nickname,
     createdByMe: row.created_by === viewerId,
     course: skeleton && !skeleton.error
-      ? { slots: skeleton.slots, placeSlotCount: skeleton.placeSlotCount, note: skeleton.note }
+      ? {
+          slots,
+          placeSlotCount: skeleton.placeSlotCount,
+          filledPlaceCount: slots.filter(slot => slot.place).length,
+          note: skeleton.note
+        }
       : null
   };
 }
@@ -75,7 +140,24 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
       ORDER BY p.scheduled_date ASC, p.start_time ASC, p.created_at ASC`
   ).bind(member.room_id, today));
 
-  return json({ datePlans: rows.map(row => toDatePlan(row, member.id)) });
+  const areas = [...new Set(rows.map(row => row.origin_area).filter((area): area is string => Boolean(area)))];
+  let candidates: CoursePlaceCandidate[] = [];
+  if (areas.length > 0) {
+    const placeholders = areas.map(() => '?').join(', ');
+    const placeRows = await all<PlaceRow>(env.DB.prepare(
+      `SELECT id, kind, name, address, area_code, is_indoor, tags_json,
+              opening_hours_json, starts_at, ends_at, popularity, info_confidence
+         FROM places
+        WHERE status = 'active'
+          AND area_code IN (${placeholders})
+          AND kind IN ('restaurant', 'cafe', 'exhibition', 'popup', 'activity', 'park')
+        ORDER BY info_confidence DESC, name ASC
+        LIMIT 600`
+    ).bind(...areas));
+    candidates = placeRows.map(toCandidate).filter((item): item is CoursePlaceCandidate => Boolean(item));
+  }
+
+  return json({ datePlans: rows.map(row => toDatePlan(row, member.id, candidates)) });
 });
 
 export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env }) => {
