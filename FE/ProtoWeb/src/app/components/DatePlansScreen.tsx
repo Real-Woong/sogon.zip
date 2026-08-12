@@ -26,8 +26,11 @@ import {
 import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
 import {
   buildCourseSkeleton,
+  buildCustomCourseSkeleton,
+  CUSTOM_COURSE_KIND_OPTIONS,
   type CourseSlot,
-  type CourseSlotKind
+  type CourseSlotKind,
+  type CustomCourseKind
 } from '../../../../../shared/dateCourseSkeleton';
 import { AREA_OPTIONS, findAreaLabel } from '../../../../../shared/areas';
 import { ScreenHeader } from './shared/ScreenHeader';
@@ -111,6 +114,8 @@ export function DatePlansScreen() {
   const [endTime, setEndTime] = useState('');
   const [originArea, setOriginArea] = useState('');
   const [budget, setBudget] = useState('');
+  const [customizeFlow, setCustomizeFlow] = useState(false);
+  const [coursePattern, setCoursePattern] = useState<CustomCourseKind[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [answeringOption, setAnsweringOption] = useState<string | null>(null);
@@ -120,10 +125,49 @@ export function DatePlansScreen() {
 
   // 저장하기 전에 시간표를 보여준다. "12시부터 9시까지"가 실제로 어떤 하루가
   // 되는지 눈으로 본 다음 저장하는 것과, 저장하고 나서 보는 것은 다르다.
-  const previewCourse = useMemo(
+  const defaultPreview = useMemo(
     () => (startTime ? buildCourseSkeleton({ startTime, endTime: endTime || null }) : null),
     [startTime, endTime]
   );
+  const previewCourse = useMemo(() => {
+    if (!startTime) return null;
+    if (!customizeFlow) return defaultPreview;
+    if (!endTime || coursePattern.length === 0) return {
+      error: '직접 구성하려면 끝나는 시간과 장소를 하나 이상 골라주세요.',
+      slots: [],
+      placeSlotCount: 0
+    };
+    return buildCustomCourseSkeleton({ startTime, endTime, pattern: coursePattern });
+  }, [coursePattern, customizeFlow, defaultPreview, endTime, startTime]);
+
+  const startCustomizing = () => {
+    const initial: CustomCourseKind[] = defaultPreview && !defaultPreview.error
+      ? defaultPreview.slots
+          .filter(slot => slot.kind !== 'transit' && slot.kind !== 'buffer')
+          .map(slot => slot.kind as CustomCourseKind)
+      : ['meal', 'activity', 'cafe'];
+    setCoursePattern(initial);
+    setCustomizeFlow(true);
+  };
+
+  const movePattern = (index: number, offset: -1 | 1) => {
+    const target = index + offset;
+    if (target < 0 || target >= coursePattern.length) return;
+    setCoursePattern(current => {
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const toggleFlowCustomization = () => {
+    if (customizeFlow) {
+      setCustomizeFlow(false);
+      setCoursePattern([]);
+      return;
+    }
+    startCustomizing();
+  };
 
   const load = async () => {
     setIsLoading(true);
@@ -159,7 +203,8 @@ export function DatePlansScreen() {
         startTime: startTime || null,
         endTime: endTime || null,
         originArea: originArea || null,
-        budgetPerPerson: budget ? Number(budget) : null
+        budgetPerPerson: budget ? Number(budget) : null,
+        coursePattern: customizeFlow ? coursePattern : null
       });
       setTitle('');
       setScheduledDate('');
@@ -167,6 +212,8 @@ export function DatePlansScreen() {
       setEndTime('');
       setOriginArea('');
       setBudget('');
+      setCustomizeFlow(false);
+      setCoursePattern([]);
       await load();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '약속을 저장하지 못했어요.');
@@ -330,6 +377,76 @@ export function DatePlansScreen() {
               </label>
             </div>
 
+            {startTime ? (
+              <div className="rounded-2xl border border-[color:var(--border)] bg-white p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black text-[color:var(--navy)]">데이트 흐름</p>
+                    <p className="mt-0.5 text-[11px] text-[color:var(--gray)]">
+                      귀찮으면 기본 흐름을 그대로 써도 돼요.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleFlowCustomization}
+                    className="rounded-xl bg-[color:var(--blush)] px-3 py-2 text-xs font-black text-[color:var(--coral-deep)]"
+                  >
+                    {customizeFlow ? '기본으로 돌아가기' : '직접 구성하기'}
+                  </button>
+                </div>
+
+                {customizeFlow ? (
+                  <div className="mt-4 space-y-3">
+                    <ol className="space-y-2">
+                      {coursePattern.map((kind, index) => (
+                        <li key={`${kind}-${index}`} className="flex items-center gap-2 rounded-xl bg-[color:var(--gray-light)] p-2">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-black text-[color:var(--coral-deep)]">
+                            {index + 1}
+                          </span>
+                          <select
+                            aria-label={`${index + 1}번째 데이트 흐름`}
+                            value={kind}
+                            onChange={event => setCoursePattern(current => current.map((item, itemIndex) =>
+                              itemIndex === index ? event.target.value as CustomCourseKind : item
+                            ))}
+                            className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2 text-xs font-black text-[color:var(--navy)]"
+                          >
+                            {CUSTOM_COURSE_KIND_OPTIONS.map(option => (
+                              <option key={option.kind} value={option.kind}>{option.label}</option>
+                            ))}
+                          </select>
+                          <button type="button" aria-label="앞으로 이동" disabled={index === 0} onClick={() => movePattern(index, -1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↑</button>
+                          <button type="button" aria-label="뒤로 이동" disabled={index === coursePattern.length - 1} onClick={() => movePattern(index, 1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↓</button>
+                          <button
+                            type="button"
+                            aria-label="이 흐름 삭제"
+                            disabled={coursePattern.length === 1}
+                            onClick={() => setCoursePattern(current => current.filter((_, itemIndex) => itemIndex !== index))}
+                            className="rounded-lg px-2 py-2 text-[11px] font-black text-[color:var(--coral-deep)] disabled:opacity-25"
+                          >
+                            삭제
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="flex flex-wrap gap-2">
+                      {CUSTOM_COURSE_KIND_OPTIONS.map(option => (
+                        <button
+                          key={option.kind}
+                          type="button"
+                          disabled={coursePattern.length >= 8}
+                          onClick={() => setCoursePattern(current => [...current, option.kind])}
+                          className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-[color:var(--navy)] ring-1 ring-[color:var(--border)] disabled:opacity-30"
+                        >
+                          + {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {previewCourse ? (
               previewCourse.error ? (
                 <p className="rounded-2xl bg-[color:var(--blush)] px-4 py-3 text-xs font-bold text-[color:var(--coral-deep)]">
@@ -340,7 +457,7 @@ export function DatePlansScreen() {
                   <p className="text-xs font-black text-[color:var(--navy)]">
                     이렇게 흘러가요 · 갈 곳 {previewCourse.placeSlotCount}군데
                   </p>
-                  {previewCourse.note ? (
+                  {'note' in previewCourse && previewCourse.note ? (
                     <p className="mt-1 text-[11px] text-[color:var(--coral-deep)]">{previewCourse.note}</p>
                   ) : null}
                   <CourseTimeline slots={previewCourse.slots} />
@@ -353,7 +470,12 @@ export function DatePlansScreen() {
 
             <button
               type="button"
-              disabled={!title.trim() || !scheduledDate || isSaving}
+              disabled={
+                !title.trim() ||
+                !scheduledDate ||
+                isSaving ||
+                Boolean(customizeFlow && previewCourse?.error)
+              }
               onClick={() => void handleCreate()}
               className="w-full rounded-2xl bg-[color:var(--coral-deep)] px-4 py-3.5 text-sm font-black text-white disabled:opacity-45"
             >

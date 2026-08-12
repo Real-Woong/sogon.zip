@@ -92,6 +92,17 @@ const TRANSIT_MINUTES: Record<TransportMode, number> = {
 };
 
 type FillableKind = Exclude<CourseSlotKind, 'transit' | 'buffer'>;
+export type CustomCourseKind = FillableKind;
+
+export const CUSTOM_COURSE_KIND_OPTIONS: readonly {
+  kind: CustomCourseKind;
+  label: string;
+}[] = [
+  { kind: 'meal', label: '식사' },
+  { kind: 'cafe', label: '카페' },
+  { kind: 'activity', label: '관람·체험' },
+  { kind: 'walk', label: '산책' }
+] as const;
 
 /**
  * `max`는 자투리를 흡수할 때의 상한이다. 이게 없으면 남는 시간이 마지막 슬롯에
@@ -153,6 +164,10 @@ const MAX_TRANSIT_STRETCH = 2;
  */
 const MAX_PLACE_SLOTS_PER_SEGMENT = 4;
 
+export function isCustomCourseKind(value: unknown): value is CustomCourseKind {
+  return CUSTOM_COURSE_KIND_OPTIONS.some(option => option.kind === value);
+}
+
 // -- 시각 변환 ---------------------------------------------------------------
 
 export function parseTimeToMinutes(value: string): number | null {
@@ -201,6 +216,69 @@ function gapDraft(kind: 'transit' | 'buffer', start: number, end: number): Draft
     anchored: false,
     preferIndoor: false,
     label: kind === 'transit' ? '이동' : '여유'
+  };
+}
+
+/**
+ * 사용자가 직접 고른 흐름을 시간 창 전체에 배치한다. 기본 골격은 그대로 두고,
+ * 명시적으로 "직접 구성"을 고른 약속에서만 사용한다.
+ */
+export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
+  pattern: readonly CustomCourseKind[];
+}) {
+  const start = parseTimeToMinutes(input.startTime);
+  const requestedEnd = input.endTime ? parseTimeToMinutes(input.endTime) : null;
+  if (start === null || (input.endTime && requestedEnd === null)) {
+    return { error: '시간을 올바르게 입력해주세요.', slots: [], placeSlotCount: 0 };
+  }
+  const end = requestedEnd ?? Math.min(start + DEFAULT_WINDOW_MINUTES, SERVICE_END_MINUTES);
+  if (end <= start || end - start < MIN_WINDOW_MINUTES) {
+    return { error: '데이트 시간은 1시간 30분 이상으로 잡아주세요.', slots: [], placeSlotCount: 0 };
+  }
+  if (end - start > MAX_WINDOW_MINUTES) {
+    return { error: '하루 코스는 14시간 안에서 정해주세요.', slots: [], placeSlotCount: 0 };
+  }
+  if (input.pattern.length < 1 || input.pattern.length > 8 || !input.pattern.every(isCustomCourseKind)) {
+    return { error: '데이트 흐름은 1개에서 8개 사이로 골라주세요.', slots: [], placeSlotCount: 0 };
+  }
+
+  const transitMinutes = TRANSIT_MINUTES[input.transport ?? 'walk'];
+  const placeMinutes = end - start - transitMinutes * (input.pattern.length - 1);
+  if (placeMinutes < input.pattern.length * 30) {
+    return { error: '선택한 흐름에 비해 시간이 짧아요. 장소를 줄이거나 시간을 늘려주세요.', slots: [], placeSlotCount: 0 };
+  }
+
+  const base = Math.floor(placeMinutes / input.pattern.length);
+  let remainder = placeMinutes % input.pattern.length;
+  let cursor = start;
+  const drafts: Draft[] = [];
+  input.pattern.forEach((kind, index) => {
+    const duration = base + (remainder > 0 ? 1 : 0);
+    remainder = Math.max(0, remainder - 1);
+    const label = kind === 'meal'
+      ? cursor < 15 * 60 ? '점심' : cursor < 20 * 60 ? '저녁' : '식사'
+      : SLOT_SPEC[kind].label;
+    drafts.push(placeDraft(kind, cursor, cursor + duration, label));
+    cursor += duration;
+    if (index < input.pattern.length - 1) {
+      drafts.push(gapDraft('transit', cursor, cursor + transitMinutes));
+      cursor += transitMinutes;
+    }
+  });
+
+  const slots = drafts.map((draft, index) => ({
+    ...draft,
+    index,
+    startTime: minutesToTime(draft.startMinutes),
+    endTime: minutesToTime(draft.endMinutes)
+  }));
+  return {
+    startMinutes: start,
+    endMinutes: end,
+    requestedStartMinutes: start,
+    requestedEndMinutes: requestedEnd,
+    slots,
+    placeSlotCount: input.pattern.length
   };
 }
 

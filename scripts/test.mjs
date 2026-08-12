@@ -157,7 +157,8 @@ const MIGRATIONS = [
   '0003_recommendation.sql',
   '0004_date_plans.sql',
   '0005_date_plan_window.sql',
-  '0006_core_preference_answers.sql'
+  '0006_core_preference_answers.sql',
+  '0007_date_plan_course_pattern.sql'
 ];
 
 function buildSchema(db) {
@@ -818,6 +819,7 @@ async function testCourseSkeleton() {
   const m = await bundle('shared/dateCourseSkeleton.ts', 'course_skeleton.mjs');
   const {
     buildCourseSkeleton,
+    buildCustomCourseSkeleton,
     applyWeatherToSkeleton,
     minutesToTime,
     SERVICE_START_MINUTES,
@@ -837,6 +839,24 @@ async function testCourseSkeleton() {
   );
   check('마지막은 여유로 끝난다', day.slots.at(-1).label, '여유');
   check('갈 곳은 4~5군데다', day.placeSlotCount >= 4 && day.placeSlotCount <= 5, true);
+
+  section('[코스/직접구성] 사용자가 고른 순서를 그대로 쓴다');
+  const custom = buildCustomCourseSkeleton({
+    startTime: '12:00',
+    endTime: '20:00',
+    pattern: ['cafe', 'walk', 'activity', 'meal']
+  });
+  check(
+    '기본 식사-활동 반복 대신 고른 순서가 나온다',
+    custom.slots.filter(slot => slot.placeKinds.length > 0).map(slot => slot.kind),
+    ['cafe', 'walk', 'activity', 'meal']
+  );
+  check('직접 구성도 시작과 끝을 정확히 채운다', [custom.slots[0].startTime, custom.slots.at(-1).endTime], ['12:00', '20:00']);
+  check(
+    '시간보다 장소가 많으면 거절한다',
+    Boolean(buildCustomCourseSkeleton({ startTime: '12:00', endTime: '13:30', pattern: ['meal', 'cafe', 'activity'] }).error),
+    true
+  );
 
   section('[코스/골격] 늦게 시작하면 점심을 넣지 않는다');
   check('15시 시작에는 점심이 없다', labelsOf(buildCourseSkeleton({ startTime: '15:00', endTime: '20:00' })).includes('점심'), false);
@@ -1171,9 +1191,9 @@ function testDatePlanWindowSchema() {
     db,
     `INSERT INTO date_plans
        (id,room_id,created_by,title,scheduled_date,start_time,end_time,origin_area,
-        budget_per_person,status,created_at,updated_at)
+        budget_per_person,course_pattern_json,status,created_at,updated_at)
      VALUES ('plan_w','room_ab','mem_a','성수 하루','2026-08-22','12:00','21:00','seongsu',
-             80000,'planned','2026-08-11','2026-08-11');`
+             80000,'["cafe","activity","meal"]','planned','2026-08-11','2026-08-11');`
   );
 
   section('[날짜/시간창] 코스 설정이 약속에 붙는다');
@@ -1181,6 +1201,11 @@ function testDatePlanWindowSchema() {
     '시간 창·동네·예산이 한 행에 남는다',
     sqlite(db, `SELECT start_time || '~' || end_time || ' ' || origin_area || ' ' || budget_per_person FROM date_plans WHERE id='plan_w';`),
     '12:00~21:00 seongsu 80000'
+  );
+  check(
+    '직접 고른 코스 순서가 한 행에 남는다',
+    sqlite(db, `SELECT course_pattern_json FROM date_plans WHERE id='plan_w';`),
+    '["cafe","activity","meal"]'
   );
   check(
     '끝 시각을 안 정한 약속도 그대로 저장된다',
