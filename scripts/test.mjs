@@ -1255,6 +1255,51 @@ async function testCoursePreferences() {
   check('빈 흐름은 저장할 수 없다', m.isValidCoursePattern([]), false);
   check('장소 유형은 8개까지만 저장한다', m.isValidCoursePattern(Array(9).fill('meal')), false);
 
+  // 접점을 약속의 기본 코스로 승격할지 판정하는 규칙. 사용자가 고르지도 않은
+  // 기본값이 "카페 6시간" 같은 칸을 내밀면 안 된다.
+  const skeleton = await bundle('shared/dateCourseSkeleton.ts', 'course_skeleton_default.mjs');
+  check(
+    '접점이 창을 채우면 기본 코스로 쓴다',
+    skeleton.resolveDefaultCoursePattern({
+      startTime: '12:00',
+      endTime: '17:00',
+      pattern: ['meal', 'activity', 'cafe']
+    }),
+    ['meal', 'activity', 'cafe']
+  );
+  check(
+    '접점이 짧아 칸이 늘어나면 규칙 기본으로 물러난다',
+    skeleton.resolveDefaultCoursePattern({
+      startTime: '12:00',
+      endTime: '18:00',
+      pattern: ['cafe']
+    }),
+    null
+  );
+  check(
+    '같은 접점이라도 창이 짧으면 그대로 쓴다',
+    skeleton.resolveDefaultCoursePattern({
+      startTime: '12:00',
+      endTime: '13:30',
+      pattern: ['cafe']
+    }),
+    ['cafe']
+  );
+  check(
+    '접점이 창보다 길면 규칙 기본으로 물러난다',
+    skeleton.resolveDefaultCoursePattern({
+      startTime: '12:00',
+      endTime: '14:00',
+      pattern: ['meal', 'cafe', 'activity', 'walk', 'meal']
+    }),
+    null
+  );
+  check(
+    '접점이 없으면 기본 코스도 없다',
+    skeleton.resolveDefaultCoursePattern({ startTime: '12:00', endTime: '17:00', pattern: [] }),
+    null
+  );
+
   const db = join(work, 'course-preferences.db');
   buildSchema(db);
   seedRoom(db);

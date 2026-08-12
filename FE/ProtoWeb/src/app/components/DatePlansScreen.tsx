@@ -33,6 +33,7 @@ import {
   buildCourseSkeleton,
   buildCustomCourseSkeleton,
   CUSTOM_COURSE_KIND_OPTIONS,
+  resolveDefaultCoursePattern,
   type CourseSlot,
   type CourseSlotKind,
   type CustomCourseKind
@@ -133,15 +134,23 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
 
   // 저장하기 전에 시간표를 보여준다. "12시부터 9시까지"가 실제로 어떤 하루가
   // 되는지 눈으로 본 다음 저장하는 것과, 저장하고 나서 보는 것은 다르다.
-  const agreedDefaultPattern = coursePreferences?.agreed && coursePreferences.commonPattern.length > 0
-    ? coursePreferences.commonPattern
-    : null;
+  // 둘의 접점이 이 시간 창을 채울 수 있을 때만 기본 코스로 쓴다. 판정은 서버와
+  // 같은 함수라, 미리보기에 보인 흐름이 그대로 저장된다.
+  const commonPattern = coursePreferences?.commonPattern;
+  const defaultPattern = useMemo(
+    () => (startTime
+      ? resolveDefaultCoursePattern({ startTime, endTime: endTime || null, pattern: commonPattern })
+      : null),
+    [commonPattern, endTime, startTime]
+  );
+  // 접점은 있는데 창에 안 맞아 규칙 기본 코스로 물러난 경우. 화면에서 이유를 밝힌다.
+  const commonPatternTooShort = Boolean(commonPattern?.length) && defaultPattern === null;
   const defaultPreview = useMemo(() => {
     if (!startTime) return null;
-    return agreedDefaultPattern
-      ? buildCustomCourseSkeleton({ startTime, endTime: endTime || null, pattern: agreedDefaultPattern })
+    return defaultPattern
+      ? buildCustomCourseSkeleton({ startTime, endTime: endTime || null, pattern: defaultPattern })
       : buildCourseSkeleton({ startTime, endTime: endTime || null });
-  }, [agreedDefaultPattern, endTime, startTime]);
+  }, [defaultPattern, endTime, startTime]);
   const previewCourse = useMemo(() => {
     if (!startTime) return null;
     if (!customizeFlow) return defaultPreview;
@@ -224,7 +233,9 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
         endTime: endTime || null,
         originArea: originArea || null,
         budgetPerPerson: budget ? Number(budget) : null,
-        coursePattern: customizeFlow ? coursePattern : agreedDefaultPattern
+        // 둘의 기본 코스는 서버가 방의 접점에서 직접 채운다. 여기서 보내면
+        // 직접 구성한 흐름과 구분되지 않아 끝나는 시간까지 강요받는다.
+        coursePattern: customizeFlow ? coursePattern : null
       });
       setTitle('');
       setScheduledDate('');
@@ -310,9 +321,11 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                 <p className="break-keep font-black text-[color:var(--navy)]">둘의 기본 코스 맞추기</p>
                 <p className="mt-1 break-keep text-xs font-bold text-[color:var(--gray)]">
                   {coursePreferences?.agreed
-                    ? '기본 코스 합의 완료'
+                    ? '둘의 순서가 완전히 같아요'
                     : coursePreferences?.ready
-                    ? `공통 ${coursePreferences.commonPattern.length}개 · 조율 필요`
+                    ? coursePreferences.commonPattern.length > 0
+                      ? `공통 ${coursePreferences.commonPattern.length}곳을 기본으로 써요`
+                      : '겹치는 순서가 없어요'
                     : `${coursePreferences?.mine?.complete ? '내 코스 완료' : '내 코스 입력 필요'}`}
                 </p>
               </div>
@@ -454,8 +467,10 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                   <div>
                     <p className="text-xs font-black text-[color:var(--navy)]">데이트 흐름</p>
                     <p className="mt-0.5 text-[11px] text-[color:var(--gray)]">
-                      {agreedDefaultPattern
+                      {defaultPattern
                         ? '둘이 맞춘 공통 흐름을 기본으로 사용해요.'
+                        : commonPatternTooShort
+                        ? '둘의 공통 흐름이 이 시간에 비해 짧아 기본 흐름을 썼어요.'
                         : '귀찮으면 기본 흐름을 그대로 써도 돼요.'}
                     </p>
                   </div>
@@ -547,7 +562,8 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                 !title.trim() ||
                 !scheduledDate ||
                 isSaving ||
-                Boolean(customizeFlow && previewCourse?.error)
+                // 기본 흐름이든 직접 구성이든, 코스가 안 나오는 창이면 막는다.
+                Boolean(previewCourse?.error)
               }
               onClick={() => void handleCreate()}
               className="w-full rounded-2xl bg-[color:var(--coral-deep)] px-4 py-3.5 text-sm font-black text-white disabled:opacity-45"

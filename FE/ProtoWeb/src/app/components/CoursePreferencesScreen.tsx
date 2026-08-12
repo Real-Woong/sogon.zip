@@ -105,8 +105,12 @@ export function CoursePreferencesScreen() {
           </div>
           {status?.agreed ? (
             <p className="mt-3 break-keep text-xs font-bold text-[color:var(--mint)]">순서가 완전히 같아요. 이 흐름을 새 약속의 기본 코스로 사용해요.</p>
+          ) : status?.needsCoordination && status.commonPattern.length > 0 ? (
+            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">
+              겹치는 순서만 새 약속의 기본 코스로 써요. 나머지는 약속마다 직접 구성하거나, 여기서 순서를 더 맞춰 주세요.
+            </p>
           ) : status?.needsCoordination ? (
-            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">공통되지 않은 순서가 있어요. 둘의 순서가 같아질 때까지 조율해 주세요.</p>
+            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">겹치는 순서가 하나도 없어요. 기본 흐름을 쓰게 되니 둘이 조율해 주세요.</p>
           ) : null}
         </section>
 

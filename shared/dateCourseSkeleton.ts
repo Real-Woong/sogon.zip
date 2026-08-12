@@ -283,6 +283,35 @@ export function buildCustomCourseSkeleton(input: CourseSkeletonInput & {
 }
 
 /**
+ * 둘이 맞춘 공통 흐름을 그 시간 창의 **기본값**으로 써도 되는지 판정한다.
+ * 쓸 수 있으면 그 순서를, 아니면 `null`(= 규칙 기본 코스를 쓰라)을 준다.
+ *
+ * `buildCustomCourseSkeleton`은 창을 슬롯 수로 균등 분배하느라 `SLOT_SPEC.max`를
+ * 보지 않는다. 직접 고른 흐름이면 그 선택을 존중하면 되지만, 기본값은 고르지도
+ * 않은 사람에게 "카페 6시간"을 내민다. 접점이 짧아 창이 남으면 슬롯을 스스로
+ * 늘릴 줄 아는 `buildCourseSkeleton` 쪽이 낫다.
+ */
+export function resolveDefaultCoursePattern(
+  input: CourseSkeletonInput & {
+    pattern: readonly CustomCourseKind[] | null | undefined;
+  }
+): CustomCourseKind[] | null {
+  const { pattern } = input;
+  if (!pattern || pattern.length === 0) return null;
+
+  const skeleton = buildCustomCourseSkeleton({ ...input, pattern });
+  // 에러 반환은 placeSlotCount가 0이다. 창이 흐름을 담지 못한 경우.
+  if (skeleton.placeSlotCount === 0) return null;
+
+  const stretched = skeleton.slots.some(slot =>
+    slot.kind !== 'transit' &&
+    slot.kind !== 'buffer' &&
+    slot.endMinutes - slot.startMinutes > SLOT_SPEC[slot.kind].max
+  );
+  return stretched ? null : [...pattern];
+}
+
+/**
  * 못 박힌 슬롯 사이를 채운다.
  *
  * `hasPrev`/`hasNext`는 이 구간 바로 앞뒤에 **장소 슬롯이 붙어 있는지**다.
