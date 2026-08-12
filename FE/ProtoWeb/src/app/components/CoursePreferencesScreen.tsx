@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, HeartHandshake, Plus, Save, Users } from 'lucide-react';
 import {
   getCoursePreferences,
@@ -7,29 +7,75 @@ import {
 } from '../lib/sogonStore';
 import {
   CUSTOM_COURSE_KIND_OPTIONS,
+  MAX_STEP_MINUTES,
+  MIN_STEP_MINUTES,
+  type CourseStep,
   type CustomCourseKind
 } from '../../../../../shared/dateCourseSkeleton';
 import { ScreenHeader } from './shared/ScreenHeader';
 
-const FALLBACK_PATTERN: CustomCourseKind[] = ['meal', 'cafe', 'activity', 'walk', 'meal'];
+const FALLBACK_PATTERN: CourseStep[] = [
+  { kind: 'meal', minutes: 90 },
+  { kind: 'cafe', minutes: 60 },
+  { kind: 'activity', minutes: 120 },
+  { kind: 'walk', minutes: 60 }
+];
 
-function patternLabel(pattern: readonly CustomCourseKind[]) {
-  return pattern.map(kind =>
-    CUSTOM_COURSE_KIND_OPTIONS.find(option => option.kind === kind)?.label ?? kind
-  );
+/** 슬라이더 눈금. 10분 단위면 손가락으로도 맞출 수 있다. */
+const STEP_GRANULARITY = 10;
+
+function kindLabel(kind: CustomCourseKind) {
+  return CUSTOM_COURSE_KIND_OPTIONS.find(option => option.kind === kind)?.label ?? kind;
 }
 
-function PatternFlow({ pattern, empty }: { pattern: readonly CustomCourseKind[]; empty: string }) {
+/** 90 → "1시간 30분". 분만 남으면 "40분", 정각이면 "2시간". */
+function formatMinutes(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}분`;
+  if (rest === 0) return `${hours}시간`;
+  return `${hours}시간 ${rest}분`;
+}
+
+function totalMinutes(pattern: readonly CourseStep[]) {
+  return pattern.reduce((sum, step) => sum + step.minutes, 0);
+}
+
+function PatternFlow({ pattern, empty }: { pattern: readonly CourseStep[]; empty: string }) {
   if (pattern.length === 0) {
     return <p className="text-sm font-bold text-[color:var(--gray)]">{empty}</p>;
   }
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {patternLabel(pattern).map((label, index) => (
-        <span key={`${label}-${index}`} className="flex items-center gap-1.5 text-xs font-black text-[color:var(--navy)]">
+      {pattern.map((step, index) => (
+        <span key={`${step.kind}-${index}`} className="flex items-center gap-1.5 text-xs font-black text-[color:var(--navy)]">
           {index > 0 ? <span className="text-[color:var(--gray)]">→</span> : null}
-          <span className="rounded-full bg-white px-3 py-2 ring-1 ring-[color:var(--border)]">{label}</span>
+          <span className="rounded-full bg-white px-3 py-2 ring-1 ring-[color:var(--border)]">
+            {kindLabel(step.kind)}
+            <span className="ml-1.5 font-bold text-[color:var(--gray)]">{formatMinutes(step.minutes)}</span>
+          </span>
         </span>
+      ))}
+    </div>
+  );
+}
+
+/** 시간 배분을 눈으로 보는 띠. 어느 칸이 하루를 많이 먹는지 숫자보다 빠르다. */
+function AllocationBar({ pattern }: { pattern: readonly CourseStep[] }) {
+  const total = totalMinutes(pattern);
+  if (total === 0) return null;
+  const tones = ['var(--coral-deep)', 'var(--lavender)', 'var(--navy)', 'var(--mint)'];
+  return (
+    <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[color:var(--gray-light)]">
+      {pattern.map((step, index) => (
+        <span
+          key={`${step.kind}-${index}`}
+          title={`${kindLabel(step.kind)} ${formatMinutes(step.minutes)}`}
+          style={{
+            width: `${(step.minutes / total) * 100}%`,
+            background: tones[index % tones.length]
+          }}
+        />
       ))}
     </div>
   );
@@ -37,10 +83,12 @@ function PatternFlow({ pattern, empty }: { pattern: readonly CustomCourseKind[];
 
 export function CoursePreferencesScreen() {
   const [status, setStatus] = useState<CoursePreferenceStatus | null>(null);
-  const [pattern, setPattern] = useState<CustomCourseKind[]>(FALLBACK_PATTERN);
+  const [pattern, setPattern] = useState<CourseStep[]>(FALLBACK_PATTERN);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+
+  const total = useMemo(() => totalMinutes(pattern), [pattern]);
 
   useEffect(() => {
     getCoursePreferences()
@@ -53,15 +101,25 @@ export function CoursePreferencesScreen() {
       .catch(caught => setError(caught instanceof Error ? caught.message : '기본 코스를 불러오지 못했어요.'));
   }, []);
 
+  const edit = (next: CourseStep[]) => {
+    setPattern(next);
+    setSaved(false);
+  };
+
   const move = (index: number, offset: -1 | 1) => {
     const target = index + offset;
     if (target < 0 || target >= pattern.length) return;
-    setPattern(current => {
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-    setSaved(false);
+    const next = [...pattern];
+    [next[index], next[target]] = [next[target], next[index]];
+    edit(next);
+  };
+
+  const setMinutes = (index: number, minutes: number) => {
+    edit(pattern.map((step, stepIndex) =>
+      stepIndex === index
+        ? { ...step, minutes: Math.min(MAX_STEP_MINUTES, Math.max(MIN_STEP_MINUTES, minutes)) }
+        : step
+    ));
   };
 
   const handleSave = async () => {
@@ -103,45 +161,91 @@ export function CoursePreferencesScreen() {
               </p>
             )}
           </div>
+          {status?.ready && status.commonPattern.length > 0 ? (
+            <p className="mt-3 break-keep text-xs font-bold text-white/70">
+              겹친 칸의 시간은 둘이 적은 시간의 평균이에요. 실제 약속이 더 짧으면 같은 비율로 줄어들어요.
+            </p>
+          ) : null}
           {status?.agreed ? (
             <p className="mt-3 break-keep text-xs font-bold text-[color:var(--mint)]">순서가 완전히 같아요. 이 흐름을 새 약속의 기본 코스로 사용해요.</p>
+          ) : status?.needsCoordination && status.commonPattern.length > 0 ? (
+            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">
+              겹치는 순서만 새 약속의 기본 코스로 써요. 나머지는 약속마다 직접 구성하거나, 여기서 순서를 더 맞춰 주세요.
+            </p>
           ) : status?.needsCoordination ? (
-            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">공통되지 않은 순서가 있어요. 둘의 순서가 같아질 때까지 조율해 주세요.</p>
+            <p className="mt-3 break-keep text-xs font-bold text-[color:var(--yellow)]">겹치는 순서가 하나도 없어요. 기본 흐름을 쓰게 되니 둘이 조율해 주세요.</p>
           ) : null}
         </section>
 
         <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black text-[color:var(--coral-deep)]">내 기본 코스</p>
-              <h2 className="mt-1 font-black text-[color:var(--navy)]">내가 좋아하는 순서</h2>
+              <h2 className="mt-1 font-black text-[color:var(--navy)]">어디에 얼마나 쓰고 싶은지</h2>
             </div>
             {saved ? <span className="flex items-center gap-1 text-xs font-black text-emerald-700"><Check className="h-4 w-4" />저장됨</span> : null}
           </div>
-          <ol className="space-y-2">
-            {pattern.map((kind, index) => (
-              <li key={`${kind}-${index}`} className="flex items-center gap-2 rounded-xl bg-[color:var(--gray-light)] p-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-black text-[color:var(--coral-deep)]">{index + 1}</span>
-                <select
-                  aria-label={`${index + 1}번째 기본 코스`}
-                  value={kind}
-                  onChange={event => {
-                    setPattern(current => current.map((item, itemIndex) => itemIndex === index ? event.target.value as CustomCourseKind : item));
-                    setSaved(false);
-                  }}
-                  className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2 text-xs font-black text-[color:var(--navy)]"
-                >
-                  {CUSTOM_COURSE_KIND_OPTIONS.map(option => <option key={option.kind} value={option.kind}>{option.label}</option>)}
-                </select>
-                <button type="button" aria-label="앞으로 이동" disabled={index === 0} onClick={() => move(index, -1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↑</button>
-                <button type="button" aria-label="뒤로 이동" disabled={index === pattern.length - 1} onClick={() => move(index, 1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↓</button>
-                <button type="button" aria-label="삭제" disabled={pattern.length === 1} onClick={() => { setPattern(current => current.filter((_, itemIndex) => itemIndex !== index)); setSaved(false); }} className="px-2 py-2 text-[11px] font-black text-[color:var(--coral-deep)] disabled:opacity-25">삭제</button>
+
+          <div className="mb-4 rounded-2xl bg-[color:var(--cream)] p-3">
+            <div className="flex items-baseline justify-between">
+              <p className="text-xs font-black text-[color:var(--navy)]">이 흐름의 길이</p>
+              <p className="text-sm font-black text-[color:var(--coral-deep)]">{formatMinutes(total)}</p>
+            </div>
+            <div className="mt-2"><AllocationBar pattern={pattern} /></div>
+            <p className="mt-2 break-keep text-[11px] leading-relaxed text-[color:var(--gray)]">
+              이동 시간은 빼고 센 거예요. 칸마다 원하는 만큼 정하면 돼요 — 밥 30분에 관람 4시간도 괜찮아요.
+            </p>
+          </div>
+
+          <ol className="space-y-3">
+            {pattern.map((step, index) => (
+              <li key={`${step.kind}-${index}`} className="rounded-2xl bg-[color:var(--gray-light)] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-black text-[color:var(--coral-deep)]">{index + 1}</span>
+                  <select
+                    aria-label={`${index + 1}번째 기본 코스`}
+                    value={step.kind}
+                    onChange={event => edit(pattern.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, kind: event.target.value as CustomCourseKind }
+                        : item
+                    ))}
+                    className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2 text-xs font-black text-[color:var(--navy)]"
+                  >
+                    {CUSTOM_COURSE_KIND_OPTIONS.map(option => <option key={option.kind} value={option.kind}>{option.label}</option>)}
+                  </select>
+                  <button type="button" aria-label="앞으로 이동" disabled={index === 0} onClick={() => move(index, -1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↑</button>
+                  <button type="button" aria-label="뒤로 이동" disabled={index === pattern.length - 1} onClick={() => move(index, 1)} className="px-1.5 py-2 text-xs font-black disabled:opacity-25">↓</button>
+                  <button type="button" aria-label="삭제" disabled={pattern.length === 1} onClick={() => edit(pattern.filter((_, itemIndex) => itemIndex !== index))} className="px-2 py-2 text-[11px] font-black text-[color:var(--coral-deep)] disabled:opacity-25">삭제</button>
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <input
+                    type="range"
+                    aria-label={`${kindLabel(step.kind)} 시간`}
+                    min={MIN_STEP_MINUTES}
+                    max={MAX_STEP_MINUTES}
+                    step={STEP_GRANULARITY}
+                    value={step.minutes}
+                    onChange={event => setMinutes(index, Number(event.target.value))}
+                    className="min-w-0 flex-1 accent-[color:var(--coral-deep)]"
+                  />
+                  <span className="w-20 shrink-0 text-right text-xs font-black text-[color:var(--navy)]">
+                    {formatMinutes(step.minutes)}
+                  </span>
+                </div>
               </li>
             ))}
           </ol>
+
           <div className="mt-3 flex flex-wrap gap-2">
             {CUSTOM_COURSE_KIND_OPTIONS.map(option => (
-              <button key={option.kind} type="button" disabled={pattern.length >= 8} onClick={() => { setPattern(current => [...current, option.kind]); setSaved(false); }} className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-[color:var(--navy)] ring-1 ring-[color:var(--border)] disabled:opacity-30">
+              <button
+                key={option.kind}
+                type="button"
+                disabled={pattern.length >= 8}
+                onClick={() => edit([...pattern, { kind: option.kind, minutes: 60 }])}
+                className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-[color:var(--navy)] ring-1 ring-[color:var(--border)] disabled:opacity-30"
+              >
                 <Plus className="mr-1 inline h-3 w-3" />{option.label}
               </button>
             ))}

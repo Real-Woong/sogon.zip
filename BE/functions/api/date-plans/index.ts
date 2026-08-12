@@ -2,9 +2,13 @@ import { dateKeyInTimeZone, isDateKey } from '../../../../shared/dateQuestions';
 import {
   buildCourseSkeleton,
   buildCustomCourseSkeleton,
+  isCourseStep,
   isCustomCourseKind,
-  type CustomCourseKind
+  resolveDefaultCoursePattern,
+  toCourseSteps,
+  type CourseStep
 } from '../../../../shared/dateCourseSkeleton';
+import { roomCommonCoursePattern } from '../_coursePreferences';
 import {
   fillCourseWithPlaces,
   type CoursePlaceCandidate,
@@ -36,7 +40,7 @@ type CreateDatePlanInput = {
   endTime?: string | null;
   originArea?: string | null;
   budgetPerPerson?: number | null;
-  coursePattern?: CustomCourseKind[] | null;
+  coursePattern?: CourseStep[] | null;
 };
 
 type PlaceRow = {
@@ -70,11 +74,15 @@ const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 /** 1인 예산 상한. 100만원을 넘기면 입력 실수로 본다. */
 const MAX_BUDGET_PER_PERSON = 1_000_000;
 
-function parseCoursePattern(value: string | null): CustomCourseKind[] | null {
+/** 시간을 정하기 전에 저장된 약속은 종류만 들어 있다. 읽으면서 시간을 붙인다. */
+function parseCoursePattern(value: string | null): CourseStep[] | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) && parsed.every(isCustomCourseKind) ? parsed : null;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed.every(item => isCustomCourseKind(item) || isCourseStep(item))
+      ? toCourseSteps(parsed)
+      : null;
   } catch {
     return null;
   }
@@ -265,7 +273,8 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
     typeof input.budgetPerPerson === 'number' && Number.isFinite(input.budgetPerPerson)
       ? Math.round(input.budgetPerPerson)
       : null;
-  const coursePattern = input.coursePattern ?? null;
+  // 사용자가 직접 구성한 흐름. 비어 있으면 둘이 맞춘 기본 코스를 아래에서 채운다.
+  const explicitPattern = input.coursePattern ?? null;
 
   if (!title) {
     return json({ error: '어떤 약속인지 이름을 적어주세요.' }, { status: 400 });
@@ -288,17 +297,30 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
   if (endTime && !startTime) {
     return json({ error: '시작 시간을 먼저 정해주세요.' }, { status: 400 });
   }
-  if (coursePattern !== null && (
-    !Array.isArray(coursePattern) ||
-    coursePattern.length < 1 ||
-    coursePattern.length > 8 ||
-    !coursePattern.every(isCustomCourseKind)
+  if (explicitPattern !== null && (
+    !Array.isArray(explicitPattern) ||
+    explicitPattern.length < 1 ||
+    explicitPattern.length > 8 ||
+    !explicitPattern.every(item => isCustomCourseKind(item) || isCourseStep(item))
   )) {
     return json({ error: '데이트 흐름을 다시 골라주세요.' }, { status: 400 });
   }
-  if (coursePattern && (!startTime || !endTime)) {
+  // 직접 구성한 흐름에만 걸리는 조건이다. 둘의 기본 코스는 창을 못 채우면
+  // 규칙 기본 코스로 물러나므로 끝나는 시간을 강요하지 않는다.
+  if (explicitPattern && (!startTime || !endTime)) {
     return json({ error: '직접 구성한 흐름을 저장하려면 시작과 끝 시간을 모두 정해주세요.' }, { status: 400 });
   }
+
+  // 흐름을 직접 짜지 않았으면 둘이 맞춘 접점을 기본값으로 쓴다. 접점이 짧아
+  // 시간 창을 못 채우면 `resolveDefaultCoursePattern`이 null을 주고 규칙 기본
+  // 코스로 돌아간다. 화면과 서버가 같은 판정을 쓰도록 shared에 한 벌만 둔다.
+  const coursePattern = (explicitPattern && toCourseSteps(explicitPattern)) ?? (startTime
+    ? resolveDefaultCoursePattern({
+        startTime,
+        endTime,
+        pattern: await roomCommonCoursePattern(env, member.room_id)
+      })
+    : null);
 
   // 시간 창을 둘 다 넣었으면 실제로 코스가 나오는 창인지 여기서 확인한다.
   // 화면에서만 막으면 저장은 되고 코스만 안 나오는 약속이 남는다.
