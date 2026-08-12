@@ -19,11 +19,13 @@ import {
   answerTodayDateQuestion,
   createDatePlan,
   getCorePreferences,
+  getCoursePreferences,
   getDatePlans,
   getTodayDateQuestion,
   type DatePlan,
   type DateCourseSlot,
   type CorePreferenceStatus,
+  type CoursePreferenceStatus,
   type TodayDateQuestion
 } from '../lib/sogonStore';
 import { dateKeyInTimeZone } from '../../../../../shared/dateQuestions';
@@ -125,15 +127,21 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
   const [answeringOption, setAnsweringOption] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [corePreferences, setCorePreferences] = useState<CorePreferenceStatus | null>(null);
+  const [coursePreferences, setCoursePreferences] = useState<CoursePreferenceStatus | null>(null);
 
   const minDate = useMemo(() => dateKeyInTimeZone(), []);
 
   // 저장하기 전에 시간표를 보여준다. "12시부터 9시까지"가 실제로 어떤 하루가
   // 되는지 눈으로 본 다음 저장하는 것과, 저장하고 나서 보는 것은 다르다.
-  const defaultPreview = useMemo(
-    () => (startTime ? buildCourseSkeleton({ startTime, endTime: endTime || null }) : null),
-    [startTime, endTime]
-  );
+  const agreedDefaultPattern = coursePreferences?.agreed && coursePreferences.commonPattern.length > 0
+    ? coursePreferences.commonPattern
+    : null;
+  const defaultPreview = useMemo(() => {
+    if (!startTime) return null;
+    return agreedDefaultPattern
+      ? buildCustomCourseSkeleton({ startTime, endTime: endTime || null, pattern: agreedDefaultPattern })
+      : buildCourseSkeleton({ startTime, endTime: endTime || null });
+  }, [agreedDefaultPattern, endTime, startTime]);
   const previewCourse = useMemo(() => {
     if (!startTime) return null;
     if (!customizeFlow) return defaultPreview;
@@ -178,12 +186,14 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
     setIsLoading(true);
     setError('');
     try {
-      const [planData, questionData] = await Promise.all([
+      const [planData, questionData, coursePreferenceData] = await Promise.all([
         getDatePlans(),
-        getTodayDateQuestion()
+        getTodayDateQuestion(),
+        getCoursePreferences().catch(() => null)
       ]);
       setPlans(planData.datePlans);
       setTodayQuestion(questionData.todayQuestion);
+      setCoursePreferences(coursePreferenceData?.coursePreferences ?? null);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '약속을 불러오지 못했어요.');
     } finally {
@@ -214,7 +224,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
         endTime: endTime || null,
         originArea: originArea || null,
         budgetPerPerson: budget ? Number(budget) : null,
-        coursePattern: customizeFlow ? coursePattern : null
+        coursePattern: customizeFlow ? coursePattern : agreedDefaultPattern
       });
       setTitle('');
       setScheduledDate('');
@@ -271,27 +281,44 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
 
       <main className={`min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 scrollbar-hide ${recommendationMode ? 'pb-28' : 'pb-10'}`}>
         {recommendationMode ? (
-          <button
-            type="button"
-            onClick={() => navigate('/core-preferences')}
-            className="flex w-full items-center gap-3 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
-          >
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
-              <HeartHandshake className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-black text-[color:var(--navy)]">
-                {corePreferences?.coupleReady ? '둘의 핵심 취향 준비 완료' : '핵심 취향 먼저 알려주기'}
-              </p>
-              <p className="mt-1 text-xs font-bold text-[color:var(--gray)]">
-                내 답변 {corePreferences?.answeredCount ?? 0}/{corePreferences?.total ?? 20}
-                {corePreferences?.partner
-                  ? ` · ${corePreferences.partner.nickname}님 ${corePreferences.partner.answeredCount}/${corePreferences.total}`
-                  : ''}
-              </p>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
-          </button>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate('/core-preferences')}
+              className="flex min-h-28 w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
+            >
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+                <HeartHandshake className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="break-keep font-black text-[color:var(--navy)]">
+                  {corePreferences?.coupleReady ? '핵심 취향 준비 완료' : '핵심 취향 알려주기'}
+                </p>
+                <p className="mt-1 text-xs font-bold text-[color:var(--gray)]">내 답변 {corePreferences?.answeredCount ?? 0}/{corePreferences?.total ?? 20}</p>
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/course-preferences')}
+              className="flex min-h-28 w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
+            >
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color:var(--lavender)]/15 text-[color:var(--lavender)]">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="break-keep font-black text-[color:var(--navy)]">둘의 기본 코스 맞추기</p>
+                <p className="mt-1 break-keep text-xs font-bold text-[color:var(--gray)]">
+                  {coursePreferences?.agreed
+                    ? '기본 코스 합의 완료'
+                    : coursePreferences?.ready
+                    ? `공통 ${coursePreferences.commonPattern.length}개 · 조율 필요`
+                    : `${coursePreferences?.mine?.complete ? '내 코스 완료' : '내 코스 입력 필요'}`}
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
+            </button>
+          </div>
         ) : null}
         {todayQuestion ? (
           <section className="rounded-[2rem] bg-[color:var(--navy)] p-5 text-white shadow-[0_16px_36px_rgba(45,39,56,0.2)]">
@@ -427,7 +454,9 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
                   <div>
                     <p className="text-xs font-black text-[color:var(--navy)]">데이트 흐름</p>
                     <p className="mt-0.5 text-[11px] text-[color:var(--gray)]">
-                      귀찮으면 기본 흐름을 그대로 써도 돼요.
+                      {agreedDefaultPattern
+                        ? '둘이 맞춘 공통 흐름을 기본으로 사용해요.'
+                        : '귀찮으면 기본 흐름을 그대로 써도 돼요.'}
                     </p>
                   </div>
                   <button

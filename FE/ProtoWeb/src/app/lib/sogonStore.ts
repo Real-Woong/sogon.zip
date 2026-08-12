@@ -113,6 +113,21 @@ export type CorePreferenceStatus = {
   coupleReady: boolean;
 };
 
+export type CoursePreferenceMember = {
+  nickname: string;
+  pattern: CustomCourseKind[];
+  complete: boolean;
+};
+
+export type CoursePreferenceStatus = {
+  mine: CoursePreferenceMember | null;
+  partner: CoursePreferenceMember | null;
+  commonPattern: CustomCourseKind[];
+  ready: boolean;
+  agreed: boolean;
+  needsCoordination: boolean;
+};
+
 export type DatePlan = {
   id: string;
   title: string;
@@ -590,6 +605,19 @@ export async function saveCorePreferenceAnswer(input: {
   return apiFetch<{ corePreferences: CorePreferenceStatus }>('/api/core-preferences', {
     method: 'POST',
     body: JSON.stringify(input)
+  });
+}
+
+// -- 둘의 기본 데이트 흐름 --------------------------------------------------
+
+export async function getCoursePreferences() {
+  return apiFetch<{ coursePreferences: CoursePreferenceStatus }>('/api/course-preferences');
+}
+
+export async function saveCoursePreferences(pattern: CustomCourseKind[]) {
+  return apiFetch<{ coursePreferences: CoursePreferenceStatus }>('/api/course-preferences', {
+    method: 'PUT',
+    body: JSON.stringify({ pattern })
   });
 }
 

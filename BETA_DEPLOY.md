@@ -45,6 +45,7 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0004_date_pla
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0005_date_plan_window.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0006_core_preference_answers.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0007_date_plan_course_pattern.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0008_member_course_preferences.sql
 ```
 
 `--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
@@ -58,6 +59,9 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0007_date_pla
 
 `0007`은 사용자가 새 약속에서 직접 고른 데이트 흐름 순서를 저장한다. 해당 UI와 API를
 배포하기 전에 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
+
+`0008`은 두 사람이 각자 정한 기본 데이트 흐름을 저장한다. 둘의 접점과 합의된 새 약속
+기본 흐름 기능을 배포하기 전에 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
 
 `0003`의 `preference_signals`는 오늘의 질문 답을 저장할 때 사용한다. 따라서 `0004`와
 날짜 API를 배포하기 전에 반드시 먼저 적용돼 있어야 한다. 추천 로그 테이블을 쓰는

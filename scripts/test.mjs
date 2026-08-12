@@ -158,7 +158,8 @@ const MIGRATIONS = [
   '0004_date_plans.sql',
   '0005_date_plan_window.sql',
   '0006_core_preference_answers.sql',
-  '0007_date_plan_course_pattern.sql'
+  '0007_date_plan_course_pattern.sql',
+  '0008_member_course_preferences.sql'
 ];
 
 function buildSchema(db) {
@@ -1239,6 +1240,43 @@ function testDatePlanWindowSchema() {
   );
 }
 
+async function testCoursePreferences() {
+  const m = await bundle('shared/coursePreferences.ts', 'course_preferences.mjs');
+
+  section('[코스/기본취향] 두 사람이 각자 정하고 접점만 계산한다');
+  check(
+    '양쪽 순서를 지키는 공통 흐름만 남는다',
+    m.commonCoursePattern(
+      ['meal', 'cafe', 'activity', 'walk', 'meal'],
+      ['meal', 'activity', 'cafe', 'walk', 'meal']
+    ),
+    ['meal', 'activity', 'walk', 'meal']
+  );
+  check('빈 흐름은 저장할 수 없다', m.isValidCoursePattern([]), false);
+  check('장소 유형은 8개까지만 저장한다', m.isValidCoursePattern(Array(9).fill('meal')), false);
+
+  const db = join(work, 'course-preferences.db');
+  buildSchema(db);
+  seedRoom(db);
+  sqlite(
+    db,
+    `INSERT INTO member_course_preferences (member_id,room_id,pattern_json,created_at,updated_at)
+       VALUES ('mem_a','room_ab','["meal","cafe"]','2026-08-12','2026-08-12');
+     INSERT INTO member_course_preferences (member_id,room_id,pattern_json,created_at,updated_at)
+       VALUES ('mem_b','room_ab','["meal","activity"]','2026-08-12','2026-08-12');`
+  );
+  check(
+    '두 사람의 기본 코스가 개인별로 따로 남는다',
+    sqlite(db, `SELECT count(*) FROM member_course_preferences WHERE room_id='room_ab';`),
+    '2'
+  );
+  check(
+    '소곤파일 본문 컬럼이 없다',
+    /content/i.test(sqlite(db, `SELECT group_concat(name) FROM pragma_table_info('member_course_preferences');`)),
+    false
+  );
+}
+
 try {
   await testOpeningRules();
   await testDateQuestionRules();
@@ -1255,6 +1293,7 @@ try {
   await testAreaConsistency();
   await testPlaceFacets();
   testDatePlanWindowSchema();
+  await testCoursePreferences();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }
