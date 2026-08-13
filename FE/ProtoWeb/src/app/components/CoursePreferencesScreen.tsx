@@ -177,7 +177,7 @@ export function CoursePreferencesScreen() {
           ) : null}
         </section>
 
-        <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
+        <section data-tour="course-preference-editor" className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black text-[color:var(--coral-deep)]">내 기본 코스</p>

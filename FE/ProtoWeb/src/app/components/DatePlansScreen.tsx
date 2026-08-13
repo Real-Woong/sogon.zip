@@ -315,6 +315,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
           <div className="space-y-3">
             <button
               type="button"
+              data-tour="rec-core-preference"
               onClick={() => navigate('/core-preferences')}
               className="flex min-h-28 w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
             >
@@ -331,6 +332,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
             </button>
             <button
               type="button"
+              data-tour="rec-course-preference"
               onClick={() => navigate('/course-preferences')}
               className="flex min-h-28 w-full items-center gap-4 rounded-3xl bg-white/90 p-4 text-left shadow-sm ring-1 ring-white"
             >
@@ -399,7 +401,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
           </section>
         ) : null}
 
-        <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
+        <section data-tour="plan-form" className="rounded-[2rem] bg-white/90 p-5 shadow-sm ring-1 ring-white">
           <div className="mb-4 flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
               <Plus className="h-5 w-5" />
@@ -442,7 +444,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
               </label>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div data-tour="plan-form-window" className="grid grid-cols-3 gap-2">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-black text-[color:var(--gray)]">끝나는 시간</span>
                 <input
@@ -482,7 +484,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
             </div>
 
             {startTime ? (
-              <div className="rounded-2xl border border-[color:var(--border)] bg-white p-3">
+              <div data-tour="plan-form-flow" className="rounded-2xl border border-[color:var(--border)] bg-white p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-black text-[color:var(--navy)]">데이트 흐름</p>
@@ -614,7 +616,7 @@ export function DatePlansScreen({ recommendationMode = false }: { recommendation
           </div>
         </section>
 
-        <section>
+        <section data-tour="plan-list">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-black text-[color:var(--navy)]">다가오는 약속</h2>
             <span className="text-xs font-black text-[color:var(--coral-deep)]">{plans.length}개</span>

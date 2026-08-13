@@ -72,7 +72,7 @@ export function CreateSogonFile() {
         </p>
 
         {/* File tag */}
-        <div>
+        <div data-tour="create-file-tags">
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
             소곤.zip 태그
           </label>
@@ -94,7 +94,7 @@ export function CreateSogonFile() {
         </div>
 
         {/* File content */}
-        <div>
+        <div data-tour="create-file-content">
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
             압축할 내용
           </label>
@@ -107,7 +107,7 @@ export function CreateSogonFile() {
         </div>
 
         {/* Sensitivity */}
-        <div>
+        <div data-tour="create-file-sensitivity">
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
             민감도
           </label>
@@ -127,7 +127,7 @@ export function CreateSogonFile() {
         </div>
 
         {/* Opening timing */}
-        <div>
+        <div data-tour="create-file-opening">
           <label className="block text-sm font-medium text-[color:var(--navy)] mb-3">
             열리는 시점
           </label>
@@ -163,7 +163,7 @@ export function CreateSogonFile() {
         </div>
 
         {/* Recommendation reflection */}
-        <div className="bg-white rounded-xl p-4 border border-[color:var(--border)]">
+        <div data-tour="create-file-recommendation" className="bg-white rounded-xl p-4 border border-[color:var(--border)]">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="font-medium text-[color:var(--navy)] mb-1">추천에 반영하기</p>
@@ -197,6 +197,7 @@ export function CreateSogonFile() {
           </p>
         ) : null}
         <button
+          data-tour="create-file-save"
           onClick={handleSave}
           disabled={!canSave}
           className="w-full bg-[color:var(--lavender)] text-white py-4 rounded-2xl shadow-sm hover:bg-[color:var(--lavender)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

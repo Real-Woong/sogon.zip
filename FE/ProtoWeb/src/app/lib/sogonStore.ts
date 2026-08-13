@@ -7,6 +7,7 @@ import type { DateQuestion } from '../../../../../shared/dateQuestions';
 import type { CourseSlot } from '../../../../../shared/dateCourseSkeleton';
 import type { CourseStep } from '../../../../../shared/dateCourseSkeleton';
 import type { CorePreferenceQuestion } from '../../../../../shared/corePreferences';
+import { parseOnboardingState, type OnboardingState } from './onboardingTour';
 
 export type { SogonFileStatus };
 
@@ -157,6 +158,7 @@ const sessionKey = 'sogonzip.session';
 const tokenKey = 'sogonzip.token';
 const receivedFilesKey = 'sogonzip.receivedFiles';
 const preferencesKey = 'sogonzip.preferences';
+const onboardingKey = 'sogonzip.onboarding';
 
 const sessionKeys = [
   tokenKey,
@@ -164,7 +166,9 @@ const sessionKeys = [
   profileKey,
   filesKey,
   preferencesKey,
-  receivedFilesKey
+  receivedFilesKey,
+  // 온보딩은 사람 단위다. 로그아웃하고 다른 사람이 들어오면 다시 안내받아야 한다.
+  onboardingKey
 ];
 
 function canUseStorage() {
@@ -287,6 +291,18 @@ export function getProfile() {
 
 export function saveProfile(profile: SogonProfile) {
   writeJson(profileKey, profile);
+}
+
+/**
+ * 온보딩 워크스루 진행 상태. 서버에 안 올린다 — 기기마다 처음 쓰는 사람에게
+ * 안내가 필요한 거지, 계정에 붙는 정보가 아니다.
+ */
+export function getOnboardingState(): OnboardingState {
+  return parseOnboardingState(readJson<unknown>(onboardingKey, null));
+}
+
+export function saveOnboardingState(state: OnboardingState) {
+  writeJson(onboardingKey, state);
 }
 
 /** 이 기기에 토큰이 남아 있는지. 세션이 유효한지는 서버가 판단한다. */

@@ -5,12 +5,13 @@ export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // `tour`는 온보딩 코치마크가 찾는 이름이다. 지우면 투어 마지막 단계가 앵커를 잃는다.
   const navItems = [
-    { icon: Heart, label: '홈', path: '/home' },
-    { icon: FolderHeart, label: '소곤.zip', path: '/my-folder' },
-    { icon: Sparkles, label: '추천', path: '/recommendation' },
-    { icon: Calendar, label: '기록', path: '/record' },
-    { icon: User, label: 'MY', path: '/plus' }
+    { icon: Heart, label: '홈', path: '/home', tour: undefined },
+    { icon: FolderHeart, label: '소곤.zip', path: '/my-folder', tour: 'nav-folder' },
+    { icon: Sparkles, label: '추천', path: '/recommendation', tour: 'nav-recommendation' },
+    { icon: Calendar, label: '기록', path: '/record', tour: undefined },
+    { icon: User, label: 'MY', path: '/plus', tour: undefined }
   ];
 
   return (
@@ -23,6 +24,7 @@ export function BottomNav() {
           return (
             <button
               key={item.path}
+              data-tour={item.tour}
               onClick={() => navigate(item.path)}
               aria-current={isActive ? 'page' : undefined}
               className="flex min-w-0 flex-col items-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[color:var(--gray)] transition-transform active:scale-95"
