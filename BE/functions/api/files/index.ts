@@ -22,6 +22,8 @@ type FileRow = {
   recommendation_on: number;
   status: SogonFileStatus;
   created_at: string;
+  opened_at: string | null;
+  partner_seen_at: string | null;
 };
 
 type CreateFileInput = {
@@ -45,6 +47,9 @@ function toFile(row: FileRow, viewerId: string) {
     recommendationOn: Boolean(row.recommendation_on),
     status: row.status,
     createdAt: row.created_at,
+    // 열린 시각을 모르는 옛 파일은 쓴 날로 물러난다. 0009 이전에 열린 것들이다.
+    openedAt: row.opened_at,
+    partnerSeenAt: row.partner_seen_at,
     isMine: row.author_member_id === viewerId
   };
 }
@@ -73,7 +78,7 @@ export const onRequestGet: PagesFunction<Env> = handle(async ({ request, env }) 
   // 상대에게 그대로 내려갔다. 제품의 첫 번째 약속을 정면으로 어기는 버그였다.
   const rows = await all<FileRow>(env.DB.prepare(
     `SELECT id, author_member_id, tags_json, content, sensitivity, opening_time, opening_at,
-            recommendation_on, status, created_at
+            recommendation_on, status, created_at, opened_at, partner_seen_at
        FROM sogon_files
       WHERE room_id = ?
         AND (author_member_id = ? OR status = 'opened')
@@ -114,6 +119,9 @@ export const onRequestPost: PagesFunction<Env> = handle(async ({ request, env })
     // 상태는 클라이언트가 지정할 수 없다. 열림 시점 규칙에서만 결정된다.
     status: opening.status,
     createdAt: now,
+    // 방금 만든 파일은 열린 적이 없다. 즉시 열림('바로 열기')이라도 여는 건 별도 행동이다.
+    openedAt: null,
+    partnerSeenAt: null,
     isMine: true
   };
 

@@ -162,8 +162,8 @@ const SOGON_ZIP_TOUR: Tour = {
     {
       anchor: 'folder-tabs',
       route: '/my-folder',
-      title: '네 칸으로 나뉘어요',
-      body: '열릴 예정 · 열 준비됨 · 열림 · 닫아둠. 정해둔 날이 지나면 "열 준비됨"으로 넘어와요.'
+      title: '다섯 칸으로 나뉘어요',
+      body: '열릴 예정 · 열 준비됨 · 열림 · 닫아둠, 그리고 둘이 주고받은 걸 모아 보는 소곤거림. 정해둔 날이 지나면 "열 준비됨"으로 넘어와요.'
     },
     {
       anchor: 'folder-list',
@@ -176,7 +176,7 @@ const SOGON_ZIP_TOUR: Tour = {
       anchor: 'nav-folder',
       route: '/my-folder',
       title: '이제 다 봤어요',
-      body: '아래 "소곤.zip" 탭이 내 소곤폴더예요. 이미 연 기록은 "기록" 탭에서 다시 볼 수 있어요.'
+      body: '아래 "소곤.zip" 탭이 내 소곤폴더예요. 상대가 열어준 소곤.zip은 홈 맨 위에 도착 알림으로 떠요.'
     }
   ]
 };

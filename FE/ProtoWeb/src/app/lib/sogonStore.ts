@@ -46,6 +46,10 @@ export type SogonFile = {
   recommendationOn: boolean;
   status: SogonFileStatus;
   createdAt: string;
+  /** 실제로 연 시각. 0009 이전에 열린 파일은 null이라 쓴 날로 물러난다. */
+  openedAt: string | null;
+  /** 받는 쪽이 확인한 시각. null이면 아직 도착 배너를 띄운다. */
+  partnerSeenAt: string | null;
   /** 내가 쓴 파일인지. 상대 파일은 열린 것만 내려온다. */
   isMine: boolean;
 };
@@ -57,15 +61,6 @@ export type SogonFileDraft = {
   openingTime: string;
   openingAt?: string | null;
   recommendationOn: boolean;
-};
-
-export type ReceivedSogonFile = {
-  id: string;
-  sender: string;
-  title: string;
-  content: string;
-  message: string;
-  receivedAt: string;
 };
 
 export type UserPreference = {
@@ -156,7 +151,6 @@ const profileKey = 'sogonzip.profile';
 const filesKey = 'sogonzip.files';
 const sessionKey = 'sogonzip.session';
 const tokenKey = 'sogonzip.token';
-const receivedFilesKey = 'sogonzip.receivedFiles';
 const preferencesKey = 'sogonzip.preferences';
 const onboardingKey = 'sogonzip.onboarding';
 
@@ -166,7 +160,6 @@ const sessionKeys = [
   profileKey,
   filesKey,
   preferencesKey,
-  receivedFilesKey,
   // 온보딩은 사람 단위다. 로그아웃하고 다른 사람이 들어오면 다시 안내받아야 한다.
   onboardingKey
 ];
@@ -444,6 +437,53 @@ export function getOpenedPartnerFiles() {
   return getSogonFiles().filter(file => file.isMine === false && file.status === 'opened');
 }
 
+/**
+ * 아직 내가 확인하지 않은, 상대가 열어준 파일.
+ * 홈 상단 도착 배너가 이걸 본다. 확인을 누르면 서버에 `partner_seen_at`이 찍혀
+ * 다른 기기에서도 배너가 같이 사라진다.
+ */
+export function getUnseenPartnerFiles() {
+  return getOpenedPartnerFiles().filter(file => !file.partnerSeenAt);
+}
+
+/** 오늘 열 수 있게 된 내 파일. 작성자 홈의 "오늘 예약한 소곤.zip" 배너가 쓴다. */
+export function getReadyOwnFiles() {
+  return getMySogonFiles().filter(file => file.status === 'ready');
+}
+
+/** 열린 소곤파일을 시간순으로. "우리들의 소곤거림" 로그가 쓴다. */
+export function getSogonLog() {
+  return getSogonFiles()
+    .filter(file => file.status === 'opened')
+    .sort((a, b) => openedMoment(b).localeCompare(openedMoment(a)));
+}
+
+/** 연 시각을 모르는 옛 파일(0009 이전)은 쓴 날로 물러난다. */
+export function openedMoment(file: SogonFile) {
+  return file.openedAt ?? file.createdAt;
+}
+
+/** 받는 쪽이 확인했다고 표시한다. 로컬 파일에는 서버가 없으니 로컬만 바꾼다. */
+export async function markPartnerFileSeen(fileId: string) {
+  const now = new Date().toISOString();
+  const applyLocal = () => {
+    writeJson(
+      filesKey,
+      getSogonFiles().map(file =>
+        file.id === fileId ? { ...file, partnerSeenAt: file.partnerSeenAt ?? now } : file
+      )
+    );
+  };
+
+  if (!getToken() || fileId.startsWith('local-')) {
+    applyLocal();
+    return;
+  }
+
+  await apiFetch(`/api/files/${encodeURIComponent(fileId)}/seen`, { method: 'POST' });
+  applyLocal();
+}
+
 function createLocalSogonFile(draft: SogonFileDraft): SogonFile {
   const opening = resolveOpening({
     openingTime: draft.openingTime,
@@ -460,6 +500,8 @@ function createLocalSogonFile(draft: SogonFileDraft): SogonFile {
     status: opening.status,
     id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt: new Date().toISOString(),
+    openedAt: null,
+    partnerSeenAt: null,
     isMine: true
   };
 }
@@ -522,7 +564,12 @@ export async function updateSogonFile(fileId: string, patch: SogonFilePatch) {
   }
 
   const data = await apiFetch<{
-    file: { openingTime: string; openingAt: string | null; status: SogonFileStatus } | null;
+    file: {
+      openingTime: string;
+      openingAt: string | null;
+      status: SogonFileStatus;
+      openedAt: string | null;
+    } | null;
   }>(`/api/files/${encodeURIComponent(fileId)}`, {
     method: 'PATCH',
     body: JSON.stringify(patch)
@@ -559,7 +606,6 @@ export async function disconnectPartner() {
   writeJson(profileKey, data.profile);
   writeJson(filesKey, []);
   writeJson(preferencesKey, []);
-  writeJson(receivedFilesKey, []);
   return data.profile;
 }
 
@@ -567,14 +613,6 @@ export async function disconnectPartner() {
 export async function deleteAccount() {
   await apiFetch('/api/auth/me', { method: 'DELETE' });
   clearLocalSession();
-}
-
-export function getReceivedSogonFiles() {
-  return readJson<ReceivedSogonFile[]>(receivedFilesKey, []);
-}
-
-export function saveReceivedSogonFiles(files: ReceivedSogonFile[]) {
-  writeJson(receivedFilesKey, files);
 }
 
 // -- 취향 -------------------------------------------------------------------
