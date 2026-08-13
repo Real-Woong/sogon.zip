@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomNav } from './shared/BottomNav';
 import {
+  BellRing,
   CalendarHeart,
   CalendarPlus,
   ChevronRight,
@@ -10,21 +11,30 @@ import {
   FolderOpen,
   Heart,
   Link2,
+  Lock,
+  MailOpen,
   Package,
   Sparkles,
-  UserPlus
+  UserPlus,
+  X
 } from 'lucide-react';
 import {
   getConnectionRequests,
   getCorePreferences,
   getDatePlans,
+  getReadyOwnFiles,
   getSogonFiles,
   getTodayDateQuestion,
+  getUnseenPartnerFiles,
+  markPartnerFileSeen,
   syncRemoteData,
+  updateSogonFile,
   type ConnectionRequest,
   type CorePreferenceStatus,
-  type DatePlan
+  type DatePlan,
+  type SogonFile
 } from '../lib/sogonStore';
+import { describeOpening } from '../../../../../shared/sogonOpening';
 import { useSession } from '../lib/session';
 import { useTour } from '../lib/tour';
 
@@ -39,6 +49,13 @@ export function HomeScreen() {
   const [datePlans, setDatePlans] = useState<DatePlan[]>([]);
   const [hasTodayQuestion, setHasTodayQuestion] = useState(false);
   const [corePreferences, setCorePreferences] = useState<CorePreferenceStatus | null>(null);
+  // "오늘 열기로 한 내 파일"과 "상대가 열어준 파일"은 홈에서 각각 배너가 된다.
+  // files에서 매번 걸러내면 열기/확인 직후 화면이 안 바뀌므로 별도 상태로 든다.
+  const [readyOwn, setReadyOwn] = useState<SogonFile[]>(() => getReadyOwnFiles());
+  const [unseenFromPartner, setUnseenFromPartner] = useState<SogonFile[]>(() => getUnseenPartnerFiles());
+  const [previewFile, setPreviewFile] = useState<SogonFile | null>(null);
+  const [bannerBusy, setBannerBusy] = useState(false);
+  const [bannerError, setBannerError] = useState('');
   const myFiles = files.filter(file => file.isMine !== false);
   const upcomingCount = myFiles.filter(file => file.status === 'scheduled').length;
   const readyCount = myFiles.filter(file => file.status === 'ready').length;
@@ -69,6 +86,8 @@ export function HomeScreen() {
     syncRemoteData()
       .then(() => {
         setFiles(getSogonFiles());
+        setReadyOwn(getReadyOwnFiles());
+        setUnseenFromPartner(getUnseenPartnerFiles());
       })
       .catch(() => undefined);
 
@@ -93,6 +112,56 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const refreshBanners = () => {
+    setFiles(getSogonFiles());
+    setReadyOwn(getReadyOwnFiles());
+    setUnseenFromPartner(getUnseenPartnerFiles());
+  };
+
+  // 지금 열기 = 상대에게 보낸다. 여기서만 status가 opened로 넘어간다.
+  const openNow = async (file: SogonFile) => {
+    if (bannerBusy) return;
+    setBannerBusy(true);
+    setBannerError('');
+    try {
+      await updateSogonFile(file.id, { status: 'opened' });
+      setPreviewFile(null);
+      refreshBanners();
+      navigate('/record');
+    } catch (caught) {
+      setBannerError(caught instanceof Error ? caught.message : '열지 못했어요.');
+    } finally {
+      setBannerBusy(false);
+    }
+  };
+
+  // 내용을 보고 나서 "역시 오늘은 아니다" 할 수 있어야 한다. 닫아둠으로 내리면
+  // 상대는 여전히 이 파일의 존재조차 모른다(절대 규칙 1).
+  const keepClosed = async (file: SogonFile) => {
+    if (bannerBusy) return;
+    setBannerBusy(true);
+    setBannerError('');
+    try {
+      await updateSogonFile(file.id, { status: 'closed' });
+      setPreviewFile(null);
+      refreshBanners();
+    } catch (caught) {
+      setBannerError(caught instanceof Error ? caught.message : '닫아두지 못했어요.');
+    } finally {
+      setBannerBusy(false);
+    }
+  };
+
+  const confirmArrival = async (file: SogonFile) => {
+    try {
+      await markPartnerFileSeen(file.id);
+    } catch {
+      // 확인 표시가 실패해도 화면은 넘어간다. 다음에 다시 배너가 뜰 뿐이다.
+    }
+    refreshBanners();
+    navigate('/received');
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#fffafa_0%,#fff4f7_44%,#f4f0ff_100%)]">
       <main className="min-h-0 flex-1 overflow-y-auto pb-24 scrollbar-hide">
@@ -115,6 +184,86 @@ export function HomeScreen() {
             </div>
             <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--gray)]" />
           </button>
+        ) : null}
+
+        {/* 상대가 열어준 파일이 도착했다. 이게 없어서 "보냈는데 안 간다"로 보였다. */}
+        {unseenFromPartner.map(file => (
+          <button
+            key={`arrived-${file.id}`}
+            type="button"
+            onClick={() => void confirmArrival(file)}
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-[linear-gradient(135deg,var(--yellow),var(--blush))] p-4 text-left shadow-sm ring-1 ring-[color:var(--coral)]/40"
+          >
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-[color:var(--coral-deep)]">
+              <MailOpen className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="break-keep font-black leading-snug text-[color:var(--navy)]">
+                {profile?.partnerNickname ?? '상대'}님에게서 온 소곤.zip이 도착했어요
+              </p>
+              <p className="mt-0.5 truncate text-xs font-bold text-[color:var(--coral-deep)]">
+                {file.tags[0] ?? '소곤'}.zip · 지금 열어보기
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--navy)]" />
+          </button>
+        ))}
+
+        {/* 오늘 열 수 있게 된 내 파일. 보낼지 말지는 여기서 정한다. */}
+        {readyOwn.length > 0 ? (
+          <section
+            aria-labelledby="ready-today-title"
+            className="mb-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[color:var(--pink)]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[color:var(--blush)] text-[color:var(--coral-deep)]">
+                <BellRing className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p id="ready-today-title" className="break-keep font-black leading-snug text-[color:var(--navy)]">
+                  오늘 예약한 소곤.zip이 있어요
+                </p>
+                <p className="mt-0.5 break-keep text-xs text-[color:var(--gray)]">
+                  {readyOwn.length > 1 ? `${readyOwn.length}개 · ` : ''}
+                  열기 전까지는 {profile?.partnerNickname ?? '상대'}님에게 보이지 않아요.
+                </p>
+              </div>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {readyOwn.map(file => (
+                <li key={`ready-${file.id}`} className="rounded-xl bg-[color:var(--cream)] p-3">
+                  <p className="text-xs font-black text-[color:var(--navy)]">
+                    {file.tags[0] ?? '소곤'}.zip
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={bannerBusy}
+                      onClick={() => setPreviewFile(file)}
+                      className="flex-1 rounded-xl bg-white py-2.5 text-xs font-black text-[color:var(--navy)] ring-1 ring-[color:var(--border)] disabled:opacity-45"
+                    >
+                      내용 확인
+                    </button>
+                    <button
+                      type="button"
+                      disabled={bannerBusy}
+                      onClick={() => void openNow(file)}
+                      className="flex-1 rounded-xl bg-[color:var(--coral-deep)] py-2.5 text-xs font-black text-white disabled:opacity-45"
+                    >
+                      지금 열기
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {bannerError ? (
+              <p role="alert" className="mt-3 rounded-xl bg-[color:var(--blush)]/60 px-3 py-2 text-xs font-bold text-[color:var(--coral-deep)]">
+                {bannerError}
+              </p>
+            ) : null}
+          </section>
         ) : null}
 
         {!isConnected ? (
@@ -372,6 +521,76 @@ export function HomeScreen() {
           </section>
         </div>
       </main>
+
+      {/* 내용을 다시 읽어보고 나서 보낼지 정한다. 열기는 언제나 명시적이어야 한다. */}
+      {previewFile ? (
+        <div className="absolute inset-0 z-20 flex items-end bg-[rgba(45,39,56,0.28)]">
+          <div className="max-h-[calc(100%-1rem)] w-full overflow-y-auto rounded-t-[2rem] bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_-18px_40px_rgba(45,39,56,0.18)]">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-black text-[color:var(--coral-deep)]">
+                  {previewFile.tags[0] ?? '소곤'}.zip
+                </p>
+                <h2 className="mt-1 break-keep text-lg font-black text-[color:var(--navy)]">
+                  이대로 {profile?.partnerNickname ?? '상대'}님에게 열까요?
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                aria-label="닫기"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--gray-light)] text-[color:var(--gray)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-[color:var(--cream)] p-4">
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-[color:var(--navy)]">
+                {previewFile.content}
+              </p>
+              <p className="mt-3 text-[11px] font-bold text-[color:var(--gray)]">
+                {previewFile.sensitivity} · {describeOpening(previewFile)}
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-start gap-2 rounded-2xl bg-[color:var(--mint)]/50 px-4 py-3">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--navy)]" />
+              <p className="break-keep text-xs font-bold leading-relaxed text-[color:var(--navy)]">
+                아직 아무것도 전해지지 않았어요. "지금 열기"를 눌러야 상대에게 보여요.
+              </p>
+            </div>
+
+            {bannerError ? (
+              <p role="alert" className="mt-4 rounded-2xl bg-[color:var(--blush)]/60 px-4 py-3 text-sm font-semibold text-[color:var(--coral-deep)]">
+                {bannerError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                disabled={bannerBusy}
+                onClick={() => void openNow(previewFile)}
+                className="w-full rounded-2xl bg-[color:var(--coral-deep)] py-4 font-black text-white disabled:opacity-45"
+              >
+                {bannerBusy ? '여는 중...' : '지금 열기'}
+              </button>
+              <button
+                type="button"
+                disabled={bannerBusy}
+                onClick={() => void keepClosed(previewFile)}
+                className="w-full rounded-2xl bg-[color:var(--gray-light)] py-4 font-black text-[color:var(--navy)] disabled:opacity-45"
+              >
+                오늘은 보내지 않을래요
+              </button>
+              <p className="pt-1 text-center text-[11px] leading-relaxed text-[color:var(--gray)]">
+                보내지 않으면 "닫아둠"으로 옮겨져요. 나중에 시점을 다시 정할 수 있어요.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <BottomNav />
     </div>

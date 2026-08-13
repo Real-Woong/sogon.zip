@@ -102,6 +102,13 @@ export const onRequestPatch: PagesFunction<Env> = handle(async ({ request, env, 
   if (input.status !== undefined) {
     updates.push('status = ?');
     values.push(input.status);
+
+    // 연 시각은 이 순간에만 알 수 있다. 나중에 소급이 안 되므로 여기서 남긴다.
+    // 기록 캘린더가 "열어본 날"을 찍는 근거이자, 상대 홈의 도착 배너 기준이다.
+    if (input.status === 'opened') {
+      updates.push('opened_at = ?');
+      values.push(new Date().toISOString());
+    }
   }
 
   if (updates.length === 0) {
@@ -117,8 +124,13 @@ export const onRequestPatch: PagesFunction<Env> = handle(async ({ request, env, 
   ).bind(...values).run();
 
   const updated = await env.DB.prepare(
-    `SELECT opening_time, opening_at, status FROM sogon_files WHERE id = ?`
-  ).bind(fileId).first<{ opening_time: string; opening_at: string | null; status: SogonFileStatus }>();
+    `SELECT opening_time, opening_at, status, opened_at FROM sogon_files WHERE id = ?`
+  ).bind(fileId).first<{
+    opening_time: string;
+    opening_at: string | null;
+    status: SogonFileStatus;
+    opened_at: string | null;
+  }>();
 
   return json({
     ok: true,
@@ -127,7 +139,8 @@ export const onRequestPatch: PagesFunction<Env> = handle(async ({ request, env, 
           id: fileId,
           openingTime: updated.opening_time,
           openingAt: updated.opening_at,
-          status: updated.status
+          status: updated.status,
+          openedAt: updated.opened_at
         }
       : null
   });

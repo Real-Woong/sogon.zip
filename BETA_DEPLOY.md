@@ -46,6 +46,7 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0005_date_pla
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0006_core_preference_answers.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0007_date_plan_course_pattern.sql
 yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0008_member_course_preferences.sql
+yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0009_sogon_file_delivery.sql
 ```
 
 `--remote`를 빼면 로컬 임시 DB에 적용된다. 프로덕션에 반영하려면 반드시 붙인다.
@@ -56,6 +57,10 @@ yarn wrangler d1 execute sogonzip-db --remote --file=BE/migrations/0008_member_c
 
 `0006`은 홈의 핵심 취향 20문항 답변을 저장한다. 핵심 취향 API와 실제 코스 코드를
 배포하기 전에 반드시 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.
+
+`0009`는 소곤파일에 `opened_at`(연 시각)과 `partner_seen_at`(상대가 확인한 시각)을
+붙인다. **코드보다 먼저 적용해야 한다** — `GET /api/files`가 두 컬럼을 SELECT하므로,
+순서를 바꾸면 소곤파일 목록 전체가 500이 난다. 아직 프로덕션 미적용.
 
 `0007`은 사용자가 새 약속에서 직접 고른 데이트 흐름 순서를 저장한다. 해당 UI와 API를
 배포하기 전에 먼저 적용한다. 2026-08-12 프로덕션에 적용했다.

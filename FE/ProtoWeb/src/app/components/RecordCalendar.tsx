@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarHeart, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
 import { BottomNav } from './shared/BottomNav';
 import { ScreenHeader } from './shared/ScreenHeader';
-import { getDatePlans, getSogonFiles, type DatePlan } from '../lib/sogonStore';
+import { getDatePlans, getSogonFiles, openedMoment, type DatePlan } from '../lib/sogonStore';
 
 type OpenedFileEvent = {
   kind: 'opened-file';
@@ -52,7 +52,9 @@ export function RecordCalendar() {
       .filter(file => file.status === 'opened')
       .forEach(file => {
         const tag = file.tags[0] ?? '소곤';
-        add(toDateKey(new Date(file.createdAt)), {
+        // 쓴 날이 아니라 **연 날**에 찍는다. 8월 2일에 압축해 8월 13일에 열었으면
+        // 8월 13일 칸에 들어가야 한다. 0009 이전 파일만 쓴 날로 물러난다.
+        add(toDateKey(new Date(openedMoment(file))), {
           kind: 'opened-file',
           id: file.id,
           title: `${tag}.zip을 열어본 날`,

@@ -159,7 +159,8 @@ const MIGRATIONS = [
   '0005_date_plan_window.sql',
   '0006_core_preference_answers.sql',
   '0007_date_plan_course_pattern.sql',
-  '0008_member_course_preferences.sql'
+  '0008_member_course_preferences.sql',
+  '0009_sogon_file_delivery.sql'
 ];
 
 function buildSchema(db) {
@@ -1453,6 +1454,78 @@ async function testOnboardingTour() {
   check('둘 다 보면 끝이다', m.allToursComplete(m.markTourComplete(once, 'sogon-zip')), true);
 }
 
+// ------------------------------------------------------------------ 전달/도착
+function testSogonFileDelivery() {
+  const db = join(work, 'delivery.db');
+  buildSchema(db);
+  seedRoom(db);
+
+  section('[전달] 상대는 열린 파일만, 그러나 열린 파일은 반드시 받는다');
+  // 이 두 줄이 같이 성립해야 한다. 하나만 지키면 "본문이 새거나" 아니면
+  // "열었는데 상대에게 영영 안 가거나" 둘 중 하나가 된다.
+  const partnerSees = (viewer) => sqlite(
+    db,
+    `SELECT group_concat(id) FROM (
+       SELECT id FROM sogon_files
+        WHERE room_id='room_ab' AND (author_member_id='${viewer}' OR status='opened')
+        ORDER BY id);`
+  );
+  check('B에게는 A가 연 파일만 보인다', partnerSees('mem_b'), 'f_opened');
+  check(
+    'A에게는 자기 파일이 다 보인다',
+    partnerSees('mem_a'),
+    'f_closed,f_due,f_opened,f_sched'
+  );
+
+  section('[전달] 연 시각과 확인 시각을 따로 남긴다');
+  // 열림이 status 한 글자로만 남던 시절에는 "열어본 날"을 쓴 날로 찍었고,
+  // 상대가 봤는지도 알 수 없어서 도착 배너를 띄울 근거가 없었다.
+  sqlite(db, `UPDATE sogon_files SET status='opened', opened_at='2026-08-13T05:00:00Z'
+                WHERE id='f_due';`);
+  check(
+    '연 시각은 쓴 날과 다르게 남는다',
+    sqlite(db, `SELECT created_at || ' / ' || opened_at FROM sogon_files WHERE id='f_due';`),
+    '2025-09-01 / 2026-08-13T05:00:00Z'
+  );
+  check(
+    '아직 아무도 확인하지 않았다',
+    sqlite(db, `SELECT count(*) FROM sogon_files
+                 WHERE room_id='room_ab' AND status='opened' AND partner_seen_at IS NULL;`),
+    '2'
+  );
+
+  section('[전달] 확인 표시는 받는 쪽만 찍을 수 있다');
+  // 작성자가 자기 파일에 "상대가 봤다"를 찍으면 도착 배너가 상대 화면에
+  // 뜨기도 전에 사라진다. author_member_id <> ? 가 그걸 막는다.
+  const markSeen = (viewer, fileId) => sqlite(
+    db,
+    `UPDATE sogon_files SET partner_seen_at='2026-08-13T06:00:00Z'
+      WHERE id='${fileId}' AND room_id='room_ab' AND author_member_id <> '${viewer}'
+        AND status='opened' AND partner_seen_at IS NULL;
+     SELECT changes();`
+  );
+  check('작성자 본인은 못 찍는다', markSeen('mem_a', 'f_opened'), '0');
+  check('상대는 찍을 수 있다', markSeen('mem_b', 'f_opened'), '1');
+  check('두 번 찍어도 한 번만 반영된다', markSeen('mem_b', 'f_opened'), '0');
+  check(
+    '아직 안 연 파일에는 확인이 안 찍힌다',
+    markSeen('mem_b', 'f_sched'),
+    '0'
+  );
+  check(
+    '확인 후에는 도착 대기가 하나 준다',
+    sqlite(db, `SELECT count(*) FROM sogon_files
+                 WHERE room_id='room_ab' AND status='opened' AND partner_seen_at IS NULL;`),
+    '1'
+  );
+
+  section('[전달] 보내지 않기로 하면 상대에게 안 보인다');
+  // 홈 배너의 "오늘은 보내지 않을래요". closed는 열린 적이 없는 상태라
+  // 상대 목록에서 그대로 빠져야 한다.
+  sqlite(db, `UPDATE sogon_files SET status='closed' WHERE id='f_due';`);
+  check('닫아둔 파일은 B에게 안 보인다', partnerSees('mem_b'), 'f_opened');
+}
+
 try {
   await testOpeningRules();
   await testDateQuestionRules();
@@ -1471,6 +1544,7 @@ try {
   testDatePlanWindowSchema();
   await testCoursePreferences();
   await testOnboardingTour();
+  testSogonFileDelivery();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }
