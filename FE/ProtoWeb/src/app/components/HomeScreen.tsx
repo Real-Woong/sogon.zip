@@ -6,6 +6,7 @@ import {
   CalendarPlus,
   ChevronRight,
   Clock3,
+  Compass,
   FolderOpen,
   Heart,
   Link2,
@@ -25,9 +26,11 @@ import {
   type DatePlan
 } from '../lib/sogonStore';
 import { useSession } from '../lib/session';
+import { useTour } from '../lib/tour';
 
 export function HomeScreen() {
   const navigate = useNavigate();
+  const { state: onboarding } = useTour();
   // 프로필은 세션이 단일 소스다. 여기서 따로 들고 있으면 상대가 연결을 수락했을 때
   // 화면마다 연결 상태가 어긋난다.
   const { profile, refresh } = useSession();
@@ -47,6 +50,16 @@ export function HomeScreen() {
   const coupleLabel = profile?.partnerNickname
     ? `${profile.nickname} x ${profile.partnerNickname}`
     : profile?.nickname;
+
+  // 처음 홈에 들어온 사람에게만 안내를 한 번 권한다. 두 번째부터는 위의
+  // "사용법 둘러보기"로만 연다 — 매번 가로채면 아는 사람에게는 방해가 된다.
+  useEffect(() => {
+    if (!onboarding.offered) {
+      navigate('/onboarding', { replace: true });
+    }
+    // 들어온 시점의 상태로만 판단한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // 상대가 연결을 수락한 걸 이 화면이 처음 알게 된다. 파일·취향만 받아오면
@@ -227,13 +240,24 @@ export function HomeScreen() {
             </section>
           ) : null}
 
-          <p className="mx-auto w-full max-w-[366px] text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">
-            TWO WAYS TO GET CLOSER
-          </p>
+          <div className="mx-auto flex w-full max-w-[366px] items-center justify-between gap-3">
+            <p className="text-xs font-black tracking-[0.14em] text-[color:var(--gray)]">
+              TWO WAYS TO GET CLOSER
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/onboarding')}
+              className="flex shrink-0 items-center gap-1 rounded-full bg-white/80 px-3 py-1.5 text-[11px] font-black text-[color:var(--coral-deep)] ring-1 ring-[color:var(--pink)]/60"
+            >
+              <Compass className="h-3.5 w-3.5" />
+              사용법 둘러보기
+            </button>
+          </div>
 
           <section aria-labelledby="sogon-delivery-title">
           <button
             type="button"
+            data-tour="home-sogon-delivery"
             onClick={() => navigate('/create-file')}
             className="mx-auto flex min-h-[230px] w-full max-w-[366px] flex-col justify-between rounded-[2rem] bg-[linear-gradient(145deg,var(--coral-deep),var(--coral))] p-5 text-left text-white shadow-[0_16px_36px_rgba(223,100,127,0.25)] transition-transform hover:-translate-y-0.5"
           >
@@ -273,6 +297,7 @@ export function HomeScreen() {
           <section aria-labelledby="date-match-title">
           <button
             type="button"
+            data-tour="home-date-match"
             onClick={() => navigate('/recommendation')}
             className="mx-auto flex min-h-[230px] w-full max-w-[366px] flex-col justify-between rounded-[2rem] bg-[color:var(--navy)] p-5 text-left text-white shadow-[0_18px_45px_rgba(45,39,56,0.2)] transition-transform hover:-translate-y-0.5"
         >

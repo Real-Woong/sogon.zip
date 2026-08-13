@@ -191,7 +191,7 @@ export function MySogonFolder() {
         <ScreenHeader title="내 소곤폴더" backTo="/home" backLabel="홈으로 돌아가기" />
 
         {/* Tabs */}
-        <div className="grid grid-cols-4 gap-1 px-3 pb-2 pt-2">
+        <div data-tour="folder-tabs" className="grid grid-cols-4 gap-1 px-3 pb-2 pt-2">
           {tabs.map(tab => (
             <button
               key={tab}
@@ -209,7 +209,7 @@ export function MySogonFolder() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 pb-24 space-y-4">
+      <div data-tour="folder-list" className="flex-1 overflow-y-auto px-6 py-6 pb-24 space-y-4">
         {visibleFiles.map(renderSavedFile)}
 
         {visibleFiles.length === 0 && (

@@ -75,7 +75,7 @@ export function CorePreferencesScreen() {
               </p>
             </div>
 
-            <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_46px_rgba(92,70,116,0.14)] ring-1 ring-[color:var(--pink)]/45">
+            <section data-tour="core-preference-question" className="rounded-[2rem] bg-white p-6 shadow-[0_18px_46px_rgba(92,70,116,0.14)] ring-1 ring-[color:var(--pink)]/45">
               <div className="flex items-center justify-between gap-3">
                 <span className="rounded-full bg-[color:var(--blush)] px-3 py-1 text-xs font-black text-[color:var(--coral-deep)]">
                   {question.group}

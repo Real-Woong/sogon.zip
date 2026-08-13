@@ -1384,6 +1384,75 @@ async function testCoursePreferences() {
   );
 }
 
+// ----------------------------------------------------------------- 온보딩 투어
+async function testOnboardingTour() {
+  const m = await bundle(
+    'FE/ProtoWeb/src/app/lib/onboardingTour.ts',
+    'onboarding_tour.mjs'
+  );
+
+  section('[온보딩] 투어 정의 자체가 성립한다');
+  check('두 흐름을 안내한다', m.TOURS.map(tour => tour.id), ['date-course', 'sogon-zip']);
+  check('빈 투어가 없다', m.TOURS.filter(tour => tour.steps.length === 0).map(tour => tour.id), []);
+  check(
+    '한 투어 안에서 같은 앵커를 두 번 짚지 않는다',
+    m.TOURS.filter(tour => new Set(tour.steps.map(step => step.anchor)).size !== tour.steps.length)
+      .map(tour => tour.id),
+    []
+  );
+  check('없는 투어를 찾으면 null이다', m.findTour('nope'), null);
+
+  section('[온보딩] 투어가 가리키는 화면이 실제로 있다');
+  // 라우트를 지우거나 이름을 바꾸면 투어는 "*" → "/"로 튕겨 나가고, 사용자는
+  // 안내를 누른 뒤 인트로 화면에 떨어진다. 타입체크로는 안 잡힌다.
+  const appSource = readFileSync(join(root, 'FE/ProtoWeb/src/app/App.tsx'), 'utf8');
+  const routePaths = new Set(
+    [...appSource.matchAll(/<Route path="([^"]+)"/g)].map(match => match[1])
+  );
+  const missingRoutes = m.TOURS.flatMap(tour =>
+    tour.steps.filter(step => !routePaths.has(step.route)).map(step => `${tour.id}:${step.route}`)
+  );
+  check('모든 단계의 경로가 App.tsx에 등록돼 있다', [...new Set(missingRoutes)], []);
+  check('온보딩 화면 자체도 라우트가 있다', routePaths.has('/onboarding'), true);
+
+  section('[온보딩] 코치마크 앵커가 화면에 남아 있다');
+  // 이게 이 테스트의 존재 이유다. 컴포넌트에서 data-tour를 빼도 컴파일은 되고,
+  // 투어만 조용히 "구멍 없는 안내"로 퇴화한다.
+  const screenSource = execFileSync(
+    'grep',
+    ['-rho', '--include=*.tsx', 'data-tour="[a-z-]*"\\|tour: .[a-z-]*.', 'FE/ProtoWeb/src/app'],
+    { cwd: root, encoding: 'utf8' }
+  );
+  const missingAnchors = m.TOURS.flatMap(tour =>
+    tour.steps
+      .filter(step => !screenSource.includes(step.anchor))
+      .map(step => `${tour.id}:${step.anchor}`)
+  );
+  check('모든 앵커가 화면 소스에 있다', missingAnchors, []);
+
+  section('[온보딩] 저장된 진행 상태를 믿지 않고 읽는다');
+  check('아무것도 없으면 빈 상태', m.parseOnboardingState(null), { offered: false, completed: [] });
+  check('문자열이 와도 안전하다', m.parseOnboardingState('yes'), { offered: false, completed: [] });
+  check(
+    '모르는 투어 id는 버린다',
+    m.parseOnboardingState({ offered: true, completed: ['date-course', 'ghost'] }),
+    { offered: true, completed: ['date-course'] }
+  );
+  check(
+    '중복은 접는다',
+    m.parseOnboardingState({ completed: ['sogon-zip', 'sogon-zip'] }).completed,
+    ['sogon-zip']
+  );
+  check('offered는 true일 때만 true다', m.parseOnboardingState({ offered: 1 }).offered, false);
+
+  section('[온보딩] 완료 표시');
+  const once = m.markTourComplete(m.EMPTY_ONBOARDING_STATE, 'date-course');
+  check('완료하면 남는다', m.isTourComplete(once, 'date-course'), true);
+  check('두 번 완료해도 하나다', m.markTourComplete(once, 'date-course').completed, ['date-course']);
+  check('하나만 봤으면 아직 다 본 게 아니다', m.allToursComplete(once), false);
+  check('둘 다 보면 끝이다', m.allToursComplete(m.markTourComplete(once, 'sogon-zip')), true);
+}
+
 try {
   await testOpeningRules();
   await testDateQuestionRules();
@@ -1401,6 +1470,7 @@ try {
   await testPlaceFacets();
   testDatePlanWindowSchema();
   await testCoursePreferences();
+  await testOnboardingTour();
 } finally {
   rmSync(work, { recursive: true, force: true });
 }
