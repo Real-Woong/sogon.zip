@@ -30,3 +30,6 @@ yarn-error.log*
 
 # Cloudflare / wrangler
 .wrangler/
+
+# 프로젝트 상태 관리 파일 (MANAGER/collect.sh 가 수집. 로컬 전용)
+_STATUS.md
